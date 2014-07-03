@@ -14,7 +14,7 @@ public class ChecksumException extends Exception {
 	 * Constructor.
 	 * 
 	 * @param message
-	 *            The exception message.À
+	 *            The exception message.
 	 */
 	public ChecksumException(String message) {
 		super(message);
