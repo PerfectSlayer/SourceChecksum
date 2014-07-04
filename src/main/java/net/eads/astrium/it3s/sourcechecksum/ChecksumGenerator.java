@@ -2,6 +2,7 @@ package net.eads.astrium.it3s.sourcechecksum;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -36,18 +37,27 @@ public class ChecksumGenerator {
 	/** The default Subversion options. */
 	private static final ISVNOptions SVN_OPTIONS = SVNWCUtil.createDefaultOptions(true);
 
-	private static String serverRoot;
-	private static String path;
-	private static String user;
-	private static String passwd;
-
 	/**
 	 * Constructor.
+	 * 
+	 * @param serverRoot
+	 *            The Subversion server root.
+	 * @param path
+	 *            The release path to compute checksum (must be a directory).
+	 * @param user
+	 *            The Subversion user name.
+	 * @param passwd
+	 *            The Subversion user password.
+	 * @param file
+	 *            The file to store checksums.
 	 */
-	public ChecksumGenerator() {
+	public ChecksumGenerator(String serverRoot, String path, String user, String passwd, File file) {
 		try {
-			SVNRepository repository = this.createRepository(ChecksumGenerator.serverRoot, ChecksumGenerator.user, ChecksumGenerator.passwd);
+			// Create repository
+			SVNRepository repository = this.createRepository(serverRoot, user, passwd);
+			// Create root resource
 			SvnDirectory rootResource = new SvnDirectory(path);
+			// Process root resource
 			this.processDirectory(repository, rootResource);
 
 		} catch (ChecksumException exception) {
@@ -315,21 +325,26 @@ public class ChecksumGenerator {
 	 *            The CLI parameters.
 	 */
 	public static void main(String[] args) {
-		if (args.length<3)
-			System.exit(-1);
-		ChecksumGenerator.serverRoot = args[0];
-		ChecksumGenerator.path = args[1];
-		ChecksumGenerator.user = args[2];
-		if (args.length<4) {
-			try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-				System.out.print("Type user password: ");
-				ChecksumGenerator.passwd = reader.readLine();
-			} catch (IOException exception) {
-				System.exit(-1);
-			}
+		if (args.length<3) {
+			MainWindow mainWindow = new MainWindow();
+			mainWindow.setVisible(true);
 		} else {
-			ChecksumGenerator.passwd = args[3];
+			String serverRoot = args[0];
+			String path = args[1];
+			File file = new File(args[2]);
+			String user = args[3];
+			String passwd = null;
+			if (args.length<5) {
+				try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
+					System.out.print("Type user password: ");
+					passwd = reader.readLine();
+				} catch (IOException exception) {
+					System.exit(-1);
+				}
+			} else {
+				passwd = args[4];
+			}
+			new ChecksumGenerator(serverRoot, path, user, passwd, file);
 		}
-		new ChecksumGenerator();
 	}
 }
