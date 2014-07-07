@@ -1,4 +1,4 @@
-package net.eads.astrium.it3s.sourcechecksum;
+package net.eads.astrium.it3s.sourcechecksum.svn;
 
 import java.util.ArrayList;
 import java.util.Collections;

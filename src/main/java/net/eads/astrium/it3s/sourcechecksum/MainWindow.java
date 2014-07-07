@@ -46,7 +46,7 @@ public class MainWindow extends JFrame {
 	public MainWindow() {
 		setTitle("SourceChecksum");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 450, 300);
+		setBounds(100, 100, 450, 360);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -150,7 +150,7 @@ public class MainWindow extends JFrame {
 				String path = MainWindow.this.pathTextField.getText();
 				String user = MainWindow.this.userTextField.getText();
 				String passwd = new String(MainWindow.this.passwdTextField.getPassword());
-				new ChecksumGenerator(repository, path, user, passwd, file);
+				new ChecksumGenerator(repository, path, user, passwd, file, null);
 			}
 		});
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();

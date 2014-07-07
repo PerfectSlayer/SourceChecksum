@@ -1,4 +1,4 @@
-package net.eads.astrium.it3s.sourcechecksum;
+package net.eads.astrium.it3s.sourcechecksum.svn;
 
 /**
  * This class represents a versioned file.
