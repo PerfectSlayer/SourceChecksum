@@ -1,18 +1,18 @@
-package net.eads.astrium.it3s.sourcechecksum.svn;
+package net.eads.astrium.it3s.sourcechecksum.resource;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * This class represents a versioned directory.
+ * This class represents an abstract directory.
  * 
  * @author Bruce BUJON
  * 
  */
-public class SvnDirectory extends SvnResource {
+public abstract class AbstractDirectory extends AbstractResource {
 	/** The resource children. */
-	protected final List<SvnResource> children;
+	protected final List<AbstractResource> children;
 
 	/**
 	 * Constructor.
@@ -20,9 +20,9 @@ public class SvnDirectory extends SvnResource {
 	 * @param name
 	 *            The directory name.
 	 */
-	public SvnDirectory(String name) {
+	public AbstractDirectory(String name) {
 		super(name);
-		this.children = new ArrayList<SvnResource>(); // TODO sorted implementation
+		this.children = new ArrayList<>(); // TODO sorted implementation
 	}
 
 	/**
@@ -31,12 +31,9 @@ public class SvnDirectory extends SvnResource {
 	 * @param resource
 	 *            The child resource to add.
 	 */
-	public void addChild(SvnResource resource) {
+	public void addChild(AbstractResource resource) {
 		// Set resource parent
 		resource.parent = this;
-		// Set resource revision
-		if (this.revision!=-1&&resource.revision==-1)
-			resource.revision = this.revision;
 		// Add resource to children
 		this.children.add(resource);
 	}
@@ -46,7 +43,7 @@ public class SvnDirectory extends SvnResource {
 	 * 
 	 * @return The resource children.
 	 */
-	public List<SvnResource> getChildren() {
+	public List<AbstractResource> getChildren() {
 		return Collections.unmodifiableList(this.children);
 	}
 }

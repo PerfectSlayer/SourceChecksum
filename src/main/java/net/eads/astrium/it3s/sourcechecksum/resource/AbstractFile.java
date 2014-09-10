@@ -1,25 +1,25 @@
-package net.eads.astrium.it3s.sourcechecksum.svn;
+package net.eads.astrium.it3s.sourcechecksum.resource;
 
 /**
- * This class represents a versioned file.
+ * This class represents an abstract file.
  * 
  * @author Bruce BUJON
  * 
  */
-public class SvnFile extends SvnResource {
+public abstract class AbstractFile extends AbstractResource {
 	/** The resource checksum. */
 	private byte[] checksum;
-	
+
 	/**
 	 * Constructor.
 	 * 
 	 * @param name
 	 *            The file name.
 	 */
-	public SvnFile(String name) {
+	public AbstractFile(String name) {
 		super(name);
 	}
-	
+
 	/**
 	 * Get the resource checksum.
 	 * 
