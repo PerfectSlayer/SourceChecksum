@@ -3,7 +3,7 @@ package net.eads.astrium.it3s.sourcechecksum.thread;
 import java.util.concurrent.ThreadFactory;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
-import net.eads.astrium.it3s.sourcechecksum.ChecksumGenerator;
+import net.eads.astrium.it3s.sourcechecksum.generator.SvnChecksumGenerator;
 
 import org.tmatesoft.svn.core.io.SVNRepository;
 
@@ -53,7 +53,7 @@ public class SvnClientThreadFactory implements ThreadFactory {
 		// Create Subversion repository
 		SVNRepository repository;
 		try {
-			repository = ChecksumGenerator.createRepository(serverRoot, user, passwd);
+			repository = SvnChecksumGenerator.createRepository(serverRoot, user, passwd);
 		} catch (ChecksumException exception) {
 			// Failed to create thread
 			return null;

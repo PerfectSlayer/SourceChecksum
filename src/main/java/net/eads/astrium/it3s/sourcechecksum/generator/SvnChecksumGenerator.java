@@ -1,4 +1,4 @@
-package net.eads.astrium.it3s.sourcechecksum;
+package net.eads.astrium.it3s.sourcechecksum.generator;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -21,6 +21,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
+import net.eads.astrium.it3s.sourcechecksum.MainWindow;
 import net.eads.astrium.it3s.sourcechecksum.listener.ChecksumListener;
 import net.eads.astrium.it3s.sourcechecksum.listener.ConsoleOutputListener;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
@@ -49,7 +51,7 @@ import org.tmatesoft.svn.core.wc.SVNWCUtil;
  * This class is the main checksum generator program.
  * 
  */
-public class ChecksumGenerator {
+public class SvnChecksumGenerator {
 	/** The digest algorithm name. */
 	private static final String DIGEST_ALGORITHM = "SHA-256"; // SHA-256, MD5, CRC32
 	/** The default Subversion options. */
@@ -126,7 +128,7 @@ public class ChecksumGenerator {
 	 * @param listener
 	 *            The listener to notify progress.
 	 */
-	public ChecksumGenerator(final String serverRoot, String path, final String user, final String passwd, File outputFile, ChecksumListener listener) {
+	public SvnChecksumGenerator(final String serverRoot, String path, final String user, final String passwd, File outputFile, ChecksumListener listener) {
 		// Store output file and listener
 		this.outputFile = outputFile;
 		this.listener = listener;
@@ -136,7 +138,7 @@ public class ChecksumGenerator {
 			 * Initialize repository.
 			 */
 			// Create repository
-			SVNRepository repository = ChecksumGenerator.createRepository(serverRoot, user, passwd);
+			SVNRepository repository = SvnChecksumGenerator.createRepository(serverRoot, user, passwd);
 			// Create root directory
 			SvnDirectory rootDirectory = new SvnDirectory(path);
 			/*
@@ -150,7 +152,7 @@ public class ChecksumGenerator {
 			// Create SVN client thread factory
 			SvnClientThreadFactory svnClientThreadFactory = new SvnClientThreadFactory(serverRoot, user, passwd);
 			// Create executer service
-			ExecutorService executorService = Executors.newFixedThreadPool(ChecksumGenerator.NBR_EXECUTORS, svnClientThreadFactory);
+			ExecutorService executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, svnClientThreadFactory);
 			// List root directory
 			this.prepareListDirectory(executorService, repository, rootDirectory);
 			try {
@@ -177,7 +179,7 @@ public class ChecksumGenerator {
 			// Notify worker
 			this.listener.onProgress(0);
 			// Create executer service
-			executorService = Executors.newFixedThreadPool(ChecksumGenerator.NBR_EXECUTORS, svnClientThreadFactory);
+			executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, svnClientThreadFactory);
 			// Process root directory
 			this.processDirectory(executorService, repository, rootDirectory);
 			// Await terminaison
@@ -211,17 +213,17 @@ public class ChecksumGenerator {
 			@Override
 			public Void call() throws Exception {
 				// Check if should break
-				if (ChecksumGenerator.this.shouldBreak)
+				if (SvnChecksumGenerator.this.shouldBreak)
 					return null;
 				try {
 					// List directory content
-					ChecksumGenerator.this.listDirectory(executorService, repository, directory);
+					SvnChecksumGenerator.this.listDirectory(executorService, repository, directory);
 				} catch (ChecksumException exception) {
 					// Break the process
-					ChecksumGenerator.this.shouldBreak = true;
+					SvnChecksumGenerator.this.shouldBreak = true;
 					// TODO
 					// Notify listener
-					ChecksumGenerator.this.listener.onError(exception);
+					SvnChecksumGenerator.this.listener.onError(exception);
 				}
 				// Return void
 				return null;
@@ -411,20 +413,20 @@ public class ChecksumGenerator {
 			@Override
 			public Void call() throws Exception {
 				// Check if should break
-				if (ChecksumGenerator.this.shouldBreak)
+				if (SvnChecksumGenerator.this.shouldBreak)
 					return null;
 				try {
 					// Process file
-					ChecksumGenerator.this.processFile(repository, file);
+					SvnChecksumGenerator.this.processFile(repository, file);
 					// Update progress counter
-					ChecksumGenerator.this.progressCounter++;
+					SvnChecksumGenerator.this.progressCounter++;
 					// Notify listener
-					ChecksumGenerator.this.listener.onProgress(ChecksumGenerator.this.progressCounter*100/ChecksumGenerator.this.fileCounter);
+					SvnChecksumGenerator.this.listener.onProgress(SvnChecksumGenerator.this.progressCounter*100/SvnChecksumGenerator.this.fileCounter);
 				} catch (ChecksumException exception) {
 					// Break the process
-					ChecksumGenerator.this.shouldBreak = true;
+					SvnChecksumGenerator.this.shouldBreak = true;
 					// Notify listener
-					ChecksumGenerator.this.listener.onError(exception);
+					SvnChecksumGenerator.this.listener.onError(exception);
 				}
 				// Return void
 				return null;
@@ -470,7 +472,7 @@ public class ChecksumGenerator {
 			String cmtRev = properties.getStringValue(SVNProperty.COMMITTED_REVISION);
 			String cmtDate = properties.getStringValue(SVNProperty.COMMITTED_DATE);
 			String author = properties.getStringValue(SVNProperty.LAST_AUTHOR);
-			keywordsMap = SVNTranslator.computeKeywords(keywords, repository.getLocation().toString(), author, cmtDate, cmtRev, ChecksumGenerator.SVN_OPTIONS);
+			keywordsMap = SVNTranslator.computeKeywords(keywords, repository.getLocation().toString(), author, cmtDate, cmtRev, SvnChecksumGenerator.SVN_OPTIONS);
 		}
 		/*
 		 * Create digest output stream.
@@ -478,9 +480,9 @@ public class ChecksumGenerator {
 		// Create message digest
 		MessageDigest digest;
 		try {
-			digest = MessageDigest.getInstance(ChecksumGenerator.DIGEST_ALGORITHM);
+			digest = MessageDigest.getInstance(SvnChecksumGenerator.DIGEST_ALGORITHM);
 		} catch (NoSuchAlgorithmException exception) {
-			throw new ChecksumException("Unable to compute \""+ChecksumGenerator.DIGEST_ALGORITHM+"\" checksum.", exception);
+			throw new ChecksumException("Unable to compute \""+SvnChecksumGenerator.DIGEST_ALGORITHM+"\" checksum.", exception);
 		}
 		/*
 		 * Get output stream for file content
@@ -495,10 +497,10 @@ public class ChecksumGenerator {
 				try {
 					String eol = properties.getStringValue(SVNProperty.EOL_STYLE);
 					String mimeType = properties.getStringValue(SVNProperty.MIME_TYPE);
-					String charset = SVNTranslator.getCharset(properties.getStringValue(SVNProperty.CHARSET), mimeType, path, ChecksumGenerator.SVN_OPTIONS);
+					String charset = SVNTranslator.getCharset(properties.getStringValue(SVNProperty.CHARSET), mimeType, path, SvnChecksumGenerator.SVN_OPTIONS);
 					// Create translating output stream for keywords
 					finalOutputStream = SVNTranslator.getTranslatingOutputStream(digestOutputStream, charset,
-							SVNTranslator.getEOL(eol, ChecksumGenerator.SVN_OPTIONS), false, keywordsMap, true);
+							SVNTranslator.getEOL(eol, SvnChecksumGenerator.SVN_OPTIONS), false, keywordsMap, true);
 				} catch (SVNException exception) {
 					throw new ChecksumException("Unable to compute file encoding for \""+path+"\".", exception);
 				}
@@ -604,7 +606,7 @@ public class ChecksumGenerator {
 			} else {
 				passwd = args[4];
 			}
-			new ChecksumGenerator(serverRoot, path, user, passwd, file, new ConsoleOutputListener());
+			new SvnChecksumGenerator(serverRoot, path, user, passwd, file, new ConsoleOutputListener());
 		}
 	}
 }

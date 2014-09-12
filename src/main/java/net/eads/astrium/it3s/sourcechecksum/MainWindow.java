@@ -16,6 +16,9 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
+
+import net.eads.astrium.it3s.sourcechecksum.generator.SvnChecksumGenerator;
+
 import java.awt.Font;
 
 /**
@@ -150,7 +153,7 @@ public class MainWindow extends JFrame {
 				String path = MainWindow.this.pathTextField.getText();
 				String user = MainWindow.this.userTextField.getText();
 				String passwd = new String(MainWindow.this.passwdTextField.getPassword());
-				new ChecksumGenerator(repository, path, user, passwd, file, null);
+				new SvnChecksumGenerator(repository, path, user, passwd, file, null);
 			}
 		});
 		GridBagConstraints gbc_btnNewButton = new GridBagConstraints();

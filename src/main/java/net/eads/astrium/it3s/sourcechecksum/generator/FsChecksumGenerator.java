@@ -1,14 +1,11 @@
-package net.eads.astrium.it3s.sourcechecksum;
+package net.eads.astrium.it3s.sourcechecksum.generator;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.DigestOutputStream;
@@ -19,8 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
 import net.eads.astrium.it3s.sourcechecksum.listener.ChecksumListener;
-import net.eads.astrium.it3s.sourcechecksum.listener.ConsoleOutputListener;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractFile;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
@@ -30,15 +27,16 @@ import net.eads.astrium.it3s.sourcechecksum.resource.fs.FsFile;
 /**
  * This class is the main checksum generator program.
  */
-public class FsChecksumGenerator {
+public class FsChecksumGenerator implements ChecksumGenerator {
 	/** The digest algorithm name. */
 	private static final String DIGEST_ALGORITHM = "SHA-256"; // SHA-256, MD5, CRC32
 	/** The number of executors for checksum computation. */
 	private static final int NBR_EXECUTORS = 30;
-	/** The worker to notify progress. */
-	private final ChecksumListener listener;
-	/** The output file to store checksums. */
-	private final File outputFile;
+	/*
+	 * Checksum computation related.
+	 */
+	/** The path to compute checksum. */
+	private final Path path;
 	/*
 	 * Progress related.
 	 */
@@ -54,71 +52,70 @@ public class FsChecksumGenerator {
 	 * 
 	 * @param path
 	 *            The path to compute checksum (must be a directory).
-	 * @param outputFile
-	 *            The output file to store checksums.
-	 * @param listener
-	 *            The listener to notify progress.
+	 * @throws ChecksumException
+	 *             Throws exception if
 	 */
-	public FsChecksumGenerator(Path path, File outputFile, ChecksumListener listener) {
-		// Store output file and listener
-		this.outputFile = outputFile;
-		this.listener = listener;
+	public FsChecksumGenerator(Path path) throws ChecksumException {
+		// Check if path is a directory
+		if (!Files.isDirectory(path))
+			throw new ChecksumException("The root path is not a directory.");
+		// Save path to compute checksum
+		this.path = path;
+	}
+
+	@Override
+	public AbstractDirectory compute(ChecksumListener listener) throws ChecksumException {
+		long time = System.nanoTime();
+		/*
+		 * List files.
+		 */
+		// Initialize progress
+		this.shouldBreak = false;
+		this.fileCounter = 0;
+		// Notify worker
+		listener.onStart();
+		// List directories and files
+		FsFileVisitor fileVisitor = new FsFileVisitor();
 		try {
-			long time = System.nanoTime();
-			/*
-			 * List files.
-			 */
-			// Initialize progress
-			this.shouldBreak = false;
-			this.fileCounter = 0;
-			// Notify worker
-			this.listener.onStart();
-			// List directories and files
-			FsFileVisitor fileVisitor = new FsFileVisitor();
-			try {
-				Files.walkFileTree(path, fileVisitor);
-			} catch (IOException exception) {
-				throw new ChecksumException("Unable to list file to compute checksums.", exception);
-			}
-			// Get root and file counter of the file system
-			FsDirectory rootDirectory = fileVisitor.getRoot();
-			this.fileCounter = fileVisitor.getFileCounter();
-			System.out.println(this.fileCounter+" files");
-			/*
-			 * Compute checksums.
-			 */
-			// Initialize progress counter
-			this.shouldBreak = false;
-			this.progressCounter = 0;
-			// Notify worker
-			this.listener.onProgress(0);
-			// Create executer service
-			ExecutorService executorService = Executors.newFixedThreadPool(FsChecksumGenerator.NBR_EXECUTORS);
-			// Process root directory
-			this.processDirectory(executorService, rootDirectory);
-			// Await terminaison
-			try {
-				executorService.shutdown();
-				executorService.awaitTermination(1, TimeUnit.DAYS);
-			} catch (InterruptedException exception) {
-				throw new ChecksumException("Checksum computation did not end in time.", exception);
-			}
-			// Check if process has broke
-			if (this.shouldBreak)
-				return;
-			// Output resource checksums
-			this.outputResourceChecksums(rootDirectory);
-			// Notify worker
-			this.listener.onDone();
-			// TODO
-			time = (System.nanoTime()-time)/1000000000;
-			if (time == 0)
-				time = 1;
-			System.out.println("Debug: "+this.fileCounter+" hashs in "+time+"secs ("+this.fileCounter/time+" hashs/secs)");
-		} catch (ChecksumException exception) {
-			// Notify worker
-			this.listener.onError(exception);
+			Files.walkFileTree(this.path, fileVisitor);
+		} catch (IOException exception) {
+			throw new ChecksumException("Unable to list file to compute checksums.", exception);
 		}
+		// Get root and file counter of the file system
+		FsDirectory rootDirectory = fileVisitor.getRoot();
+		this.fileCounter = fileVisitor.getFileCounter();
+		System.out.println(this.fileCounter+" files");
+		/*
+		 * Compute checksums.
+		 */
+		// Initialize progress counter
+		this.shouldBreak = false;
+		this.progressCounter = 0;
+		// Notify worker
+		listener.onProgress(0);
+		// Create executer service
+		ExecutorService executorService = Executors.newFixedThreadPool(FsChecksumGenerator.NBR_EXECUTORS);
+		// Process root directory
+		this.processDirectory(executorService, rootDirectory, listener);
+		// Await terminaison
+		try {
+			executorService.shutdown();
+			executorService.awaitTermination(1, TimeUnit.DAYS);
+		} catch (InterruptedException exception) {
+			throw new ChecksumException("Checksum computation did not end in time.", exception);
+		}
+		// Check if process has broke
+		if (this.shouldBreak)
+			throw new ChecksumException("An error occured while checksum computation.");
+		// Notify worker
+		listener.onDone();
+		// TODO
+		time = (System.nanoTime()-time)/1000000000;
+		if (time==0)
+			time = 1;
+		System.out.println("Debug: "+this.fileCounter+" hashs in "+time+"secs ("+this.fileCounter/time+" hashs/secs)");
+		// Return root directory
+		return rootDirectory;
 	}
 
 	/**
@@ -128,10 +125,12 @@ public class FsChecksumGenerator {
 	 *            The executor service to get executors.
 	 * @param directory
 	 *            The directory to proceed.
+	 * @param listener
+	 *            The listener to notify computation progress.
 	 * @throws ChecksumException
 	 *             Throws exception if a checksum could not be computed.
 	 */
-	public void processDirectory(ExecutorService executorService, FsDirectory directory) throws ChecksumException {
+	public void processDirectory(ExecutorService executorService, FsDirectory directory, ChecksumListener listener) throws ChecksumException {
 		// Process each child resource
 		for (AbstractResource resource : directory.getChildren()) {
 			// Check if should break
@@ -140,10 +139,10 @@ public class FsChecksumGenerator {
 			// Check resource type
 			if (resource instanceof FsDirectory)
 				// Recursively process directory
-				this.processDirectory(executorService, (FsDirectory) resource);
+				this.processDirectory(executorService, (FsDirectory) resource, listener);
 			else if (resource instanceof FsFile)
 				// Prepare file
-				this.prepareFile(executorService, (FsFile) resource);
+				this.prepareFile(executorService, (FsFile) resource, listener);
 		}
 	}
 
@@ -154,10 +153,12 @@ public class FsChecksumGenerator {
 	 *            The executor service to get executors.
 	 * @param file
 	 *            The file to proceed.
+	 * @param listener
+	 *            The listener to notify computation progress.
 	 * @throws ChecksumException
 	 *             Throws exception if the checksum could not be computed.
 	 */
-	public void prepareFile(ExecutorService executorService, final FsFile file) throws ChecksumException {
+	public void prepareFile(ExecutorService executorService, final FsFile file, final ChecksumListener listener) throws ChecksumException {
 		// Submit a new task to process file
 		executorService.submit(new Callable<Void>() {
 			@Override
@@ -171,12 +172,12 @@ public class FsChecksumGenerator {
 					// Update progress counter
 					FsChecksumGenerator.this.progressCounter++;
 					// Notify listener
-					FsChecksumGenerator.this.listener.onProgress(FsChecksumGenerator.this.progressCounter*100/FsChecksumGenerator.this.fileCounter);
+					listener.onProgress(FsChecksumGenerator.this.progressCounter*100/FsChecksumGenerator.this.fileCounter);
 				} catch (ChecksumException exception) {
 					// Break the process
 					FsChecksumGenerator.this.shouldBreak = true;
 					// Notify listener
-					FsChecksumGenerator.this.listener.onError(exception);
+					listener.onError(exception);
 				}
 				// Return void
 				return null;
@@ -221,82 +222,6 @@ public class FsChecksumGenerator {
 			file.setChecksum(digestBytes);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to get file content for \""+file.getPath()+"\".", exception);
-		}
-	}
-
-	/**
-	 * Output resource checksums.
-	 * 
-	 * @param resource
-	 *            The resource to output checksum.
-	 * @throws ChecksumException
-	 *             Throws exception if the checksums could not be output.
-	 */
-	public void outputResourceChecksums(AbstractResource resource) throws ChecksumException {
-		// Create an output writer
-		try (BufferedWriter writer = Files.newBufferedWriter(this.outputFile.toPath())) {
-			// Output resource on the writer
-			this.outputResource(writer, resource);
-		} catch (IOException exception) {
-			throw new ChecksumException("Unable to write checksum file.", exception);
-		}
-	}
-
-	/**
-	 * Output resource checksums.
-	 * 
-	 * @param writer
-	 *            The writer to output checksums.
-	 * @param resource
-	 *            The resource to output checksum.
-	 * @throws IOException
-	 *             Throws exception if the checksum could not be output.
-	 */
-	protected void outputResource(BufferedWriter writer, AbstractResource resource) throws IOException {
-		// Check directory resource type
-		if (resource instanceof AbstractDirectory) {
-			// Output each child of directory
-			for (AbstractResource child : ((AbstractDirectory) resource).getChildren())
-				this.outputResource(writer, child);
-			// Return
-			return;
-		}
-		// Check file resource type
-		else if (resource instanceof AbstractFile) {
-			// Get file resource
-			AbstractFile file = (AbstractFile) resource;
-			// Get file checksum bytes
-			// TODO
-			byte[] checksumBytes = file.getChecksum();
-			if (checksumBytes==null)
-				return;
-			// Create hash string representation
-			StringBuilder stringBuilder = new StringBuilder();
-			for (byte b : file.getChecksum())
-				stringBuilder.append(String.format("%02x", b));
-			// Append file working copy path
-			stringBuilder.append('\t');
-			stringBuilder.append(file.getPath());
-			// Append buffer to output
-			writer.write(stringBuilder.toString());
-			writer.newLine();
-		}
-	}
-
-	/**
-	 * The main procedure.
-	 * 
-	 * @param args
-	 *            The CLI parameters.
-	 */
-	public static void main(String[] args) {
-		if (args.length<2) {
-			MainWindow mainWindow = new MainWindow();
-			mainWindow.setVisible(true);
-		} else {
-			Path path = Paths.get(args[0]);
-			File file = new File(args[1]);
-			new FsChecksumGenerator(path, file, new ConsoleOutputListener());
 		}
 	}
 
