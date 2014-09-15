@@ -2,7 +2,10 @@ package net.eads.astrium.it3s.sourcechecksum.resource;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+
+import net.eads.astrium.it3s.sourcechecksum.ChecksumTool;
 
 /**
  * This class represents an abstract directory.
@@ -11,6 +14,13 @@ import java.util.List;
  * 
  */
 public abstract class AbstractDirectory extends AbstractResource {
+	/** The child comparator. */
+	protected static final Comparator<AbstractResource> CHILD_COMPARATOR = new Comparator<AbstractResource>() {
+		@Override
+		public int compare(AbstractResource resource1, AbstractResource resource2) {
+			return ChecksumTool.compareResource(resource1, resource2);
+		}
+	};
 	/** The resource children. */
 	protected final List<AbstractResource> children;
 
@@ -45,5 +55,25 @@ public abstract class AbstractDirectory extends AbstractResource {
 	 */
 	public List<AbstractResource> getChildren() {
 		return Collections.unmodifiableList(this.children);
+	}
+
+	/**
+	 * Recursively sort the child resources.
+	 */
+	public void sort() {
+		Collections.sort(this.children, AbstractDirectory.CHILD_COMPARATOR);
+		// Recursively sort each directory
+		for (AbstractResource child : this.children) {
+			// Check child type
+			if (!(child instanceof AbstractDirectory))
+				continue;
+			// Sort child directory
+			((AbstractDirectory) child).sort();
+		}
+	}
+	
+	@Override
+	public String toString() {
+		return "Directory "+this.getName();
 	}
 }

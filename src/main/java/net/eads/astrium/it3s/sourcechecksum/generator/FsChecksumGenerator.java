@@ -53,7 +53,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 * @param path
 	 *            The path to compute checksum (must be a directory).
 	 * @throws ChecksumException
-	 *             Throws exception if
+	 *             Throws exception if the generator could not be created.
 	 */
 	public FsChecksumGenerator(Path path) throws ChecksumException {
 		// Check if path is a directory
@@ -62,9 +62,14 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// Save path to compute checksum
 		this.path = path;
 	}
+	
+	/*
+	 * Checksum Generator.
+	 */
 
 	@Override
 	public AbstractDirectory compute(ChecksumListener listener) throws ChecksumException {
+		// TODO timers
 		long time = System.nanoTime();
 		/*
 		 * List files.
@@ -109,7 +114,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 			throw new ChecksumException("An error occured while checksum computation.");
 		// Notify worker
 		listener.onDone();
-		// TODO
+		// TODO timers
 		time = (System.nanoTime()-time)/1000000000;
 		if (time==0)
 			time = 1;

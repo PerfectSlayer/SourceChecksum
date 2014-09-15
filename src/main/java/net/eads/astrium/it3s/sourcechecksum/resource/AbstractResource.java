@@ -74,6 +74,11 @@ public abstract class AbstractResource implements Comparable<AbstractResource> {
 		return this.parent;
 	}
 
+	@Override
+	public String toString() {
+		return "Resource "+this.getName();
+	}
+
 	/*
 	 * Comparable.
 	 */

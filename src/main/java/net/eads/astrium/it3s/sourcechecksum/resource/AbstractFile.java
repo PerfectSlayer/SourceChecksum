@@ -38,4 +38,9 @@ public abstract class AbstractFile extends AbstractResource {
 	public void setChecksum(byte[] checksum) {
 		this.checksum = checksum;
 	}
+
+	@Override
+	public String toString() {
+		return "File "+this.getName();
+	}
 }

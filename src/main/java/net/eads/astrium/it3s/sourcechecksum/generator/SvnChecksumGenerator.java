@@ -1,13 +1,8 @@
 package net.eads.astrium.it3s.sourcechecksum.generator;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,9 +17,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
-import net.eads.astrium.it3s.sourcechecksum.MainWindow;
 import net.eads.astrium.it3s.sourcechecksum.listener.ChecksumListener;
-import net.eads.astrium.it3s.sourcechecksum.listener.ConsoleOutputListener;
+import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
 import net.eads.astrium.it3s.sourcechecksum.resource.svn.SvnDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.svn.SvnFile;
@@ -51,17 +45,13 @@ import org.tmatesoft.svn.core.wc.SVNWCUtil;
  * This class is the main checksum generator program.
  * 
  */
-public class SvnChecksumGenerator {
+public class SvnChecksumGenerator implements ChecksumGenerator {
 	/** The digest algorithm name. */
 	private static final String DIGEST_ALGORITHM = "SHA-256"; // SHA-256, MD5, CRC32
 	/** The default Subversion options. */
 	private static final ISVNOptions SVN_OPTIONS = SVNWCUtil.createDefaultOptions(true);
 	/** The number of executors for checksum computation. */
 	private static final int NBR_EXECUTORS = 30;
-	/** The worker to notify progress. */
-	private final ChecksumListener listener;
-	/** The output file to store checksums. */
-	private final File outputFile;
 	/*
 	 * Progress related.
 	 */
@@ -73,6 +63,13 @@ public class SvnChecksumGenerator {
 	private volatile int progressCounter;
 	/** The file counter to compute checksum. */
 	private volatile int fileCounter;
+
+	/** The Subversion repository to compute checksums. */
+	private SVNRepository repository;
+	/** The root directory to compute checksums. */
+	private SvnDirectory rootDirectory;
+	/** The Subversion client thread factory. */
+	private SvnClientThreadFactory svnClientThreadFactory;
 
 	/**
 	 * Create Subversion repository.
@@ -123,89 +120,95 @@ public class SvnChecksumGenerator {
 	 *            The Subversion user name.
 	 * @param passwd
 	 *            The Subversion user password.
-	 * @param outputFile
-	 *            The output file to store checksums.
-	 * @param listener
-	 *            The listener to notify progress.
+	 * @throws ChecksumException
+	 *             Throws exception if the generator could not be created.
 	 */
-	public SvnChecksumGenerator(final String serverRoot, String path, final String user, final String passwd, File outputFile, ChecksumListener listener) {
-		// Store output file and listener
-		this.outputFile = outputFile;
-		this.listener = listener;
-		try {
-			long time = System.nanoTime();
-			/*
-			 * Initialize repository.
-			 */
-			// Create repository
-			SVNRepository repository = SvnChecksumGenerator.createRepository(serverRoot, user, passwd);
-			// Create root directory
-			SvnDirectory rootDirectory = new SvnDirectory(path);
-			/*
-			 * List files.
-			 */
-			// Initialize progress
-			this.shouldBreak = false;
-			this.fileCounter = 0;
-			// Notify worker
-			this.listener.onStart();
-			// Create SVN client thread factory
-			SvnClientThreadFactory svnClientThreadFactory = new SvnClientThreadFactory(serverRoot, user, passwd);
-			// Create executer service
-			ExecutorService executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, svnClientThreadFactory);
-			// List root directory
-			this.prepareListDirectory(executorService, repository, rootDirectory);
-			try {
-				// Wait until no pending directory left
-				while (!this.pendingDirectories.isEmpty()&&!this.shouldBreak) {
-					Thread.sleep(100);
-				}
-				// Await terminaison
-				executorService.shutdown();
-				executorService.awaitTermination(1, TimeUnit.DAYS);
-			} catch (InterruptedException exception) {
-				throw new ChecksumException("Checksum computation did not end in time.", exception);
-			}
-			System.out.println(this.fileCounter+" files");
-			// Check if process has broke
-			if (this.shouldBreak)
-				return;
-			/*
-			 * Compute checksums.
-			 */
-			// Initialize progress counter
-			this.shouldBreak = false;
-			this.progressCounter = 0;
-			// Notify worker
-			this.listener.onProgress(0);
-			// Create executer service
-			executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, svnClientThreadFactory);
-			// Process root directory
-			this.processDirectory(executorService, repository, rootDirectory);
-			// Await terminaison
-			try {
-				executorService.shutdown();
-				executorService.awaitTermination(1, TimeUnit.DAYS);
-			} catch (InterruptedException exception) {
-				throw new ChecksumException("Checksum computation did not end in time.", exception);
-			}
-			// Check if process has broke
-			if (this.shouldBreak)
-				return;
-			// Output resource checksums
-			this.outputResourceChecksums(rootDirectory);
-			// Notify worker
-			this.listener.onDone();
-			// TODO
-			time = (System.nanoTime()-time)/1000000000;
-			System.out.println("Debug: "+this.fileCounter+" hashs in "+time+"secs ("+this.fileCounter/time+" hashs/secs)");
-		} catch (ChecksumException exception) {
-			// Notify worker
-			this.listener.onError(exception);
-		}
+	public SvnChecksumGenerator(final String serverRoot, String path, final String user, final String passwd) throws ChecksumException {
+		// Create repository
+		this.repository = SvnChecksumGenerator.createRepository(serverRoot, user, passwd);
+		// Create root directory
+		this.rootDirectory = new SvnDirectory(path);
+		// Create SVN client thread factory
+		this.svnClientThreadFactory = new SvnClientThreadFactory(serverRoot, user, passwd);
 	}
 
-	public void prepareListDirectory(final ExecutorService executorService, final SVNRepository repository, final SvnDirectory directory) {
+	/*
+	 * Checksum generator.
+	 */
+
+	@Override
+	public AbstractDirectory compute(ChecksumListener listener) throws ChecksumException {
+		// TODO timers
+		long time = System.nanoTime();
+		/*
+		 * List files.
+		 */
+		// Initialize progress
+		this.shouldBreak = false;
+		this.fileCounter = 0;
+		// Notify worker
+		listener.onStart();
+		// Create executer service
+		ExecutorService executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, this.svnClientThreadFactory);
+		// List root directory
+		this.prepareListDirectory(executorService, this.rootDirectory, listener);
+		try {
+			// Wait until no pending directory left
+			while (!this.pendingDirectories.isEmpty()&&!this.shouldBreak) {
+				Thread.sleep(100);
+			}
+			// Await terminaison
+			executorService.shutdown();
+			executorService.awaitTermination(1, TimeUnit.DAYS);
+		} catch (InterruptedException exception) {
+			throw new ChecksumException("Checksum computation did not end in time.", exception);
+		}
+		System.out.println(this.fileCounter+" files");
+		// Check if process has broke
+		if (this.shouldBreak)
+			throw new ChecksumException("An error occured while listing resources.");
+		/*
+		 * Compute checksums.
+		 */
+		// Initialize progress counter
+		this.shouldBreak = false;
+		this.progressCounter = 0;
+		// Notify worker
+		listener.onProgress(0);
+		// Create executer service
+		executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, this.svnClientThreadFactory);
+		// Process root directory
+		this.processDirectory(executorService, rootDirectory, listener);
+		// Await terminaison
+		try {
+			executorService.shutdown();
+			executorService.awaitTermination(1, TimeUnit.DAYS);
+		} catch (InterruptedException exception) {
+			throw new ChecksumException("Checksum computation did not end in time.", exception);
+		}
+		// Check if process has broke
+		if (this.shouldBreak)
+			throw new ChecksumException("An error occured while checksum computation.");
+		// Notify worker
+		listener.onDone();
+		// TODO timers
+		time = (System.nanoTime()-time)/1000000000;
+		System.out.println("Debug: "+this.fileCounter+" hashs in "+time+"secs ("+this.fileCounter/time+" hashs/secs)");
+		// Return the root directory
+		return this.rootDirectory;
+	}
+
+	/**
+	 * Prepare directory listing directory content.
+	 * 
+	 * @param executorService
+	 *            The executor service to get executors.
+	 * @param directory
+	 *            The directory resource to list.
+	 * @param listener
+	 *            The listener to notify computation progress.
+	 */
+	public void prepareListDirectory(final ExecutorService executorService, final SvnDirectory directory, final ChecksumListener listener) {
 		// Add directory pending directories
 		this.pendingDirectories.add(directory);
 		// Submit a task to list directory
@@ -217,13 +220,12 @@ public class SvnChecksumGenerator {
 					return null;
 				try {
 					// List directory content
-					SvnChecksumGenerator.this.listDirectory(executorService, repository, directory);
+					SvnChecksumGenerator.this.listDirectory(executorService, directory, listener);
 				} catch (ChecksumException exception) {
 					// Break the process
 					SvnChecksumGenerator.this.shouldBreak = true;
-					// TODO
 					// Notify listener
-					SvnChecksumGenerator.this.listener.onError(exception);
+					listener.onError(exception);
 				}
 				// Return void
 				return null;
@@ -236,14 +238,15 @@ public class SvnChecksumGenerator {
 	 * 
 	 * @param executorService
 	 *            The executor service to get executors.
-	 * @param repository
-	 *            The Subversion repository.
 	 * @param directory
 	 *            The directory resource to list.
+	 * @param listener
+	 *            The listener to notify computation progress.
 	 * @throws ChecksumException
 	 *             Throw exception if the directory could not be listed.
 	 */
-	public void listDirectory(ExecutorService executorService, SVNRepository repository, SvnDirectory directory) throws ChecksumException {
+	public void listDirectory(ExecutorService executorService, SvnDirectory directory, ChecksumListener listener)
+			throws ChecksumException {
 		/*
 		 * Handle parallel programmation.
 		 */
@@ -270,7 +273,7 @@ public class SvnChecksumGenerator {
 					SvnDirectory childDirectory = new SvnDirectory(dirEntry.getName());
 					directory.addChild(childDirectory);
 					// Recursively process directory
-					this.prepareListDirectory(executorService, repository, childDirectory);
+					this.prepareListDirectory(executorService, childDirectory, listener);
 					continue;
 				}
 				// Create Subversion file
@@ -353,7 +356,7 @@ public class SvnChecksumGenerator {
 					// Process external directory
 					if (nodeKind==SVNNodeKind.DIR) {
 						// Process external directory
-						this.prepareListDirectory(executorService, repository, (SvnDirectory) externalResource);
+						this.prepareListDirectory(executorService, (SvnDirectory) externalResource, listener);
 					}
 				}
 			} catch (SVNException exception) {
@@ -372,14 +375,14 @@ public class SvnChecksumGenerator {
 	 * 
 	 * @param executorService
 	 *            The executor service to get executors.
-	 * @param repository
-	 *            The Subversion repository.
 	 * @param directory
 	 *            The directory to proceed.
+	 * @param listener
+	 *            The listener to notify computation progress.
 	 * @throws ChecksumException
 	 *             Throws exception if a checksum could not be computed.
 	 */
-	public void processDirectory(ExecutorService executorService, SVNRepository repository, SvnDirectory directory) throws ChecksumException {
+	public void processDirectory(ExecutorService executorService, SvnDirectory directory, ChecksumListener listener) throws ChecksumException {
 		// Process each child resource
 		for (AbstractResource resource : directory.getChildren()) {
 			// Check if should break
@@ -388,10 +391,10 @@ public class SvnChecksumGenerator {
 			// Check resource type
 			if (resource instanceof SvnDirectory)
 				// Recursively process directory
-				this.processDirectory(executorService, repository, (SvnDirectory) resource);
+				this.processDirectory(executorService, (SvnDirectory) resource, listener);
 			else if (resource instanceof SvnFile)
 				// Prepare file
-				this.prepareFile(executorService, repository, (SvnFile) resource);
+				this.prepareFile(executorService, (SvnFile) resource, listener);
 		}
 	}
 
@@ -400,14 +403,14 @@ public class SvnChecksumGenerator {
 	 * 
 	 * @param executorService
 	 *            The executor service to get executors.
-	 * @param repository
-	 *            The Subversion repository.
 	 * @param file
 	 *            The file to proceed.
+	 * @param listener
+	 *            The listener to notify computation progress.
 	 * @throws ChecksumException
 	 *             Throws exception if the checksum could not be computed.
 	 */
-	public void prepareFile(ExecutorService executorService, final SVNRepository repository, final SvnFile file) throws ChecksumException {
+	public void prepareFile(ExecutorService executorService, final SvnFile file, final ChecksumListener listener) throws ChecksumException {
 		// Submit a new task to process file
 		executorService.submit(new Callable<Void>() {
 			@Override
@@ -421,12 +424,12 @@ public class SvnChecksumGenerator {
 					// Update progress counter
 					SvnChecksumGenerator.this.progressCounter++;
 					// Notify listener
-					SvnChecksumGenerator.this.listener.onProgress(SvnChecksumGenerator.this.progressCounter*100/SvnChecksumGenerator.this.fileCounter);
+					listener.onProgress(SvnChecksumGenerator.this.progressCounter*100/SvnChecksumGenerator.this.fileCounter);
 				} catch (ChecksumException exception) {
 					// Break the process
 					SvnChecksumGenerator.this.shouldBreak = true;
 					// Notify listener
-					SvnChecksumGenerator.this.listener.onError(exception);
+					listener.onError(exception);
 				}
 				// Return void
 				return null;
@@ -472,7 +475,8 @@ public class SvnChecksumGenerator {
 			String cmtRev = properties.getStringValue(SVNProperty.COMMITTED_REVISION);
 			String cmtDate = properties.getStringValue(SVNProperty.COMMITTED_DATE);
 			String author = properties.getStringValue(SVNProperty.LAST_AUTHOR);
-			keywordsMap = SVNTranslator.computeKeywords(keywords, repository.getLocation().toString(), author, cmtDate, cmtRev, SvnChecksumGenerator.SVN_OPTIONS);
+			keywordsMap = SVNTranslator.computeKeywords(keywords, repository.getLocation().toString(), author, cmtDate, cmtRev,
+					SvnChecksumGenerator.SVN_OPTIONS);
 		}
 		/*
 		 * Create digest output stream.
@@ -520,93 +524,6 @@ public class SvnChecksumGenerator {
 			file.setChecksum(digestBytes);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to get file content for \""+path+"\".", exception);
-		}
-	}
-
-	/**
-	 * Output resource checksums.
-	 * 
-	 * @param resource
-	 *            The resource to output checksum.
-	 * @throws ChecksumException
-	 *             Throws exception if the checksums could not be output.
-	 */
-	public void outputResourceChecksums(AbstractResource resource) throws ChecksumException {
-		// Create an output writer
-		try (BufferedWriter writer = Files.newBufferedWriter(this.outputFile.toPath())) {
-			// Output resource on the writer
-			this.outputResource(writer, resource);
-		} catch (IOException exception) {
-			throw new ChecksumException("Unable to write checksum file.", exception);
-		}
-	}
-
-	/**
-	 * Output resource checksums.
-	 * 
-	 * @param writer
-	 *            The writer to output checksums.
-	 * @param resource
-	 *            The resource to output checksum.
-	 * @throws IOException
-	 *             Throws exception if the checksum could not be output.
-	 */
-	protected void outputResource(BufferedWriter writer, AbstractResource resource) throws IOException {
-		// Check directory resource type
-		if (resource instanceof SvnDirectory) {
-			// Output each child of directory
-			for (AbstractResource child : ((SvnDirectory) resource).getChildren())
-				this.outputResource(writer, child);
-			// Return
-			return;
-		}
-		// Get file resource
-		SvnFile svnFile = (SvnFile) resource;
-		// Get file checksum bytes
-		// TODO
-		byte[] checksumBytes = svnFile.getChecksum();
-		if (checksumBytes==null)
-			return;
-		// Create hash string representation
-		StringBuilder stringBuilder = new StringBuilder();
-		for (byte b : svnFile.getChecksum())
-			stringBuilder.append(String.format("%02x", b));
-		// Append file working copy path
-		stringBuilder.append('\t');
-		stringBuilder.append(svnFile.getWorkingCopyPath());
-		// Append buffer to output
-		writer.write(stringBuilder.toString());
-		writer.newLine();
-	}
-
-	/**
-	 * The main procedure.
-	 * 
-	 * @param args
-	 *            The CLI parameters.
-	 */
-	public static void main(String[] args) {
-		if (args.length<3) {
-			MainWindow mainWindow = new MainWindow();
-			mainWindow.setVisible(true);
-		} else {
-			String serverRoot = args[0];
-			String path = args[1];
-			File file = new File(args[2]);
-			String user = args[3];
-			String passwd = null;
-			if (args.length<5) {
-				try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-					System.out.print("Type user password: ");
-					char[] passwdChars = System.console().readPassword();
-					passwd = new String(passwdChars);
-				} catch (IOException exception) {
-					System.exit(-1);
-				}
-			} else {
-				passwd = args[4];
-			}
-			new SvnChecksumGenerator(serverRoot, path, user, passwd, file, new ConsoleOutputListener());
 		}
 	}
 }
