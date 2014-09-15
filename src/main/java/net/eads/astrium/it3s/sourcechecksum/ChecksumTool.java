@@ -1,8 +1,10 @@
 package net.eads.astrium.it3s.sourcechecksum;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -76,7 +78,7 @@ public class ChecksumTool {
 		Option userOption = OptionBuilder.withLongOpt("user").withDescription("The Subversion user name.").hasArg(true).create();
 		options.addOption(userOption);
 		// Create password option
-		Option passwdOption = OptionBuilder.withLongOpt("passwd").withDescription("The Subversion user password.").create();
+		Option passwdOption = OptionBuilder.withLongOpt("passwd").withDescription("The Subversion user password.").hasArg(true).create();
 		options.addOption(passwdOption);
 		// Create output option
 		Option outputOption = OptionBuilder.withLongOpt("output").withDescription("The result output file.").hasArg(true).isRequired(true).create();
@@ -121,10 +123,18 @@ public class ChecksumTool {
 			} else if (commandLine.hasOption("repository")&&commandLine.hasOption("url")) {
 				// Create checksum generator on Subversion
 				try {
+					// Get checksum generator parameters
 					String repository = commandLine.getOptionValue("repository");
 					String url = commandLine.getOptionValue("url");
 					String user = commandLine.getOptionValue("user");
-					String passwd = commandLine.getOptionValue("passwd"); // TODO
+					// Get user password
+					String passwd;
+					if (commandLine.hasOption("passwd")) {
+						passwd = commandLine.getOptionValue("passwd");
+					} else {
+						passwd = new String(ChecksumTool.readPasswd());
+					}
+					// Create checksum generator
 					checksumGenerator = ChecksumTool.buildSvnChecksumGenerator(repository, url, user, passwd);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
@@ -178,7 +188,13 @@ public class ChecksumTool {
 					// Get repository parameters for checksum generators
 					String repository = commandLine.getOptionValue("repository");
 					String user = commandLine.getOptionValue("user");
-					String passwd = commandLine.getOptionValue("passwd"); // TODO
+					// Get user password
+					String passwd;
+					if (commandLine.hasOption("passwd")) {
+						passwd = commandLine.getOptionValue("passwd");
+					} else {
+						passwd = new String(ChecksumTool.readPasswd());
+					}
 					// Get URLs for checksum generators
 					String urls[] = commandLine.getOptionValues("url");
 					if (urls.length!=2) {
@@ -248,7 +264,7 @@ public class ChecksumTool {
 				String rightSubName = rightName.substring(0, rightNameIndex-1);
 				// Compare without extension
 				int compare = leftSubName.compareTo(rightSubName);
-				if (compare == 0) {
+				if (compare==0) {
 					// Compare extension
 					leftSubName = leftName.substring(leftNameIndex+1);
 					rightSubName = rightName.substring(rightNameIndex+1);
@@ -485,6 +501,28 @@ public class ChecksumTool {
 				leftResource = null;
 				rightResource = null;
 			}
+		}
+	}
+
+	/**
+	 * Read user password.
+	 * 
+	 * @return The read user password.
+	 */
+	private static String readPasswd() {
+		// Notify user
+		System.out.print("Input Subversion user password: ");
+		// Check system console
+		if (System.console()==null) {
+			// Create reader from standard input
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
+				return reader.readLine();
+			} catch (IOException exception) {
+				return "";
+			}
+		} else {
+			// Read from console
+			return new String(System.console().readPassword());
 		}
 	}
 
