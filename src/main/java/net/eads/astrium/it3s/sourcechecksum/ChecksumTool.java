@@ -232,7 +232,36 @@ public class ChecksumTool {
 		} else if (!(resource1 instanceof AbstractDirectory)&&resource2 instanceof AbstractDirectory) {
 			return 1;
 		} else {
-			return resource1.getName().compareTo(resource2.getName()); // TODO compare without extension
+			// Check name extensions
+			String leftName = resource1.getName();
+			String rightName = resource2.getName();
+			// Compute dot indexes
+			int leftNameIndex = leftName.lastIndexOf('.');
+			int rightNameIndex = rightName.lastIndexOf('.');
+			// Check dot presence
+			if (leftNameIndex==-1&&rightNameIndex==-1) {
+				// Compare without extension
+				return resource1.getName().compareTo(resource2.getName());
+			} else if (leftNameIndex>0&&rightNameIndex>0) {
+				// Get sub names
+				String leftSubName = leftName.substring(0, leftNameIndex-1);
+				String rightSubName = rightName.substring(0, rightNameIndex-1);
+				// Compare without extension
+				int compare = leftSubName.compareTo(rightSubName);
+				if (compare == 0) {
+					// Compare extension
+					leftSubName = leftName.substring(leftNameIndex+1);
+					rightSubName = rightName.substring(rightNameIndex+1);
+					return leftSubName.compareTo(rightSubName);
+				} else {
+					return compare;
+				}
+			} else {
+				// Compare mixing extension presence
+				String leftSubName = leftNameIndex>0 ? leftName.substring(0, leftNameIndex-1) : leftName;
+				String rightSubName = rightNameIndex>0 ? rightName.substring(0, rightNameIndex-1) : rightName;
+				return leftSubName.compareTo(rightSubName);
+			}
 		}
 	}
 
@@ -384,15 +413,12 @@ public class ChecksumTool {
 			// Check if right must be taken
 			if (rightResource==null&&rightResourceIterator.hasNext())
 				rightResource = rightResourceIterator.next();
-			
-
 			/*
 			 * Compare resources.
 			 */
 			// Compare resource
 			int compare = ChecksumTool.compareResource(leftResource, rightResource);
 			// Check resource equality
-			System.out.println(leftResource+" "+rightResource+" "+compare);
 			if (compare<0) {
 				if (leftResource instanceof AbstractDirectory) {
 					// Output left directory
