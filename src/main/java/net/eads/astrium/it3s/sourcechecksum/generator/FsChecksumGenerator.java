@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
+import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
 import net.eads.astrium.it3s.sourcechecksum.listener.ChecksumListener;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractFile;
@@ -28,8 +29,6 @@ import net.eads.astrium.it3s.sourcechecksum.resource.fs.FsFile;
  * This class is the main checksum generator program.
  */
 public class FsChecksumGenerator implements ChecksumGenerator {
-	/** The digest algorithm name. */
-	private static final String DIGEST_ALGORITHM = "SHA-256"; // SHA-256, MD5, CRC32
 	/** The number of executors for checksum computation. */
 	private static final int NBR_EXECUTORS = 30;
 	/*
@@ -37,6 +36,8 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 */
 	/** The path to compute checksum. */
 	private final Path path;
+	/** The algorithm to use to compute checksum. */
+	private ChecksumAlgorithm algorithm;
 	/*
 	 * Progress related.
 	 */
@@ -68,7 +69,9 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 */
 
 	@Override
-	public AbstractDirectory compute(ChecksumListener listener) throws ChecksumException {
+	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener) throws ChecksumException {
+		// Save algorithm to use
+		this.algorithm = algorithm;
 		// TODO timers
 		long time = System.nanoTime();
 		/*
@@ -205,9 +208,9 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// Create message digest
 		MessageDigest digest;
 		try {
-			digest = MessageDigest.getInstance(FsChecksumGenerator.DIGEST_ALGORITHM);
+			digest = MessageDigest.getInstance(this.algorithm.getName());
 		} catch (NoSuchAlgorithmException exception) {
-			throw new ChecksumException("Unable to compute \""+FsChecksumGenerator.DIGEST_ALGORITHM+"\" checksum.", exception);
+			throw new ChecksumException("Unable to compute \""+this.algorithm+"\" checksum.", exception);
 		}
 		/*
 		 * Get output stream for file content

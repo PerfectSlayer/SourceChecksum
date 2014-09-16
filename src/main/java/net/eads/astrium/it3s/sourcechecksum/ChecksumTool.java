@@ -8,9 +8,12 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Security;
 import java.util.Arrays;
 import java.util.Iterator;
 
+import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
+import net.eads.astrium.it3s.sourcechecksum.algorithm.CustomSecurityProvider;
 import net.eads.astrium.it3s.sourcechecksum.generator.ChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.generator.FsChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.generator.SvnChecksumGenerator;
@@ -80,6 +83,10 @@ public class ChecksumTool {
 		// Create password option
 		Option passwdOption = OptionBuilder.withLongOpt("passwd").withDescription("The Subversion user password.").hasArg(true).create();
 		options.addOption(passwdOption);
+		// Create algorithm option
+		Option algorithOption = OptionBuilder.withLongOpt("algorithm").withDescription("The checksum algorithm to use (CRC32, MD5 or SHA256 (default))")
+				.hasArg(true).create();
+		options.addOption(algorithOption);
 		// Create output option
 		Option outputOption = OptionBuilder.withLongOpt("output").withDescription("The result output file.").hasArg(true).isRequired(true).create();
 		options.addOption(outputOption);
@@ -105,6 +112,19 @@ public class ChecksumTool {
 		/*
 		 * Start tool.
 		 */
+		// Add custom security provider
+		Security.addProvider(new CustomSecurityProvider());
+		// Get checksum algorithm
+		ChecksumAlgorithm algorithm = null;
+		try {
+			algorithm = ChecksumAlgorithm.valueOf(commandLine.getOptionValue("algorithm", "SHA256").toUpperCase());
+		} catch (IllegalArgumentException exception) {
+			// Notify user then exit
+			System.err.println("Invalid algorimthm parameter.");
+			System.exit(0);
+		}
+		// Get the output file
+		File outputFile = new File(commandLine.getOptionValue("output"));
 		// Check mode
 		if (commandLine.hasOption("list")) {
 			// Declare checksum generator
@@ -148,9 +168,8 @@ public class ChecksumTool {
 			}
 			try {
 				// Compute checksums
-				AbstractDirectory directory = checksumGenerator.compute(listener);
+				AbstractDirectory directory = checksumGenerator.compute(algorithm, listener);
 				// Output checksums
-				File outputFile = new File(commandLine.getOptionValue("output"));
 				ChecksumTool.outputResourceChecksum(directory, outputFile);
 			} catch (ChecksumException exception) {
 				// Notify listener on error
@@ -217,13 +236,12 @@ public class ChecksumTool {
 			}
 			try {
 				// Compute checksums
-				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(listener);
-				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(listener);
+				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(algorithm, listener);
+				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(algorithm, listener);
 				// Sort directories
 				leftDirectory.sort();
 				rightDirectory.sort();
 				// Output checksums
-				File outputFile = new File(commandLine.getOptionValue("output"));
 				ChecksumTool.outputDiffResourceChecksum(leftDirectory, rightDirectory, outputFile);
 			} catch (ChecksumException exception) {
 				// Notify listener on error
@@ -232,6 +250,16 @@ public class ChecksumTool {
 		}
 	}
 
+	/**
+	 * Compare two resources.
+	 * 
+	 * @param resource1
+	 *            The first resource to compare.
+	 * @param resource2
+	 *            The second resource to compare.
+	 * @return A strictly negative number if first resource is before the second one, a strictly positive number if the second resource is before the first one,
+	 *         <code>0</code> if resources are equals.
+	 */
 	public static int compareResource(AbstractResource resource1, AbstractResource resource2) {
 		// Check null cases
 		if (resource1==null&&resource2==null)
@@ -311,11 +339,11 @@ public class ChecksumTool {
 	 */
 	protected static ChecksumGenerator buildSvnChecksumGenerator(String repository, String url, String user, String passwd) throws ChecksumException {
 		// Check repository leading slash
-		if (repository.charAt(repository.length()-1) == '/')
+		if (repository.charAt(repository.length()-1)=='/')
 			// Remove leading slash
 			repository = repository.substring(0, repository.length()-1);
 		// Check URL leading slash
-		if (url.charAt(url.length()-1) == '/')
+		if (url.charAt(url.length()-1)=='/')
 			url = url.substring(0, url.length()-1);
 		// Create new checksum generator
 		return new SvnChecksumGenerator(repository, url, user, passwd);

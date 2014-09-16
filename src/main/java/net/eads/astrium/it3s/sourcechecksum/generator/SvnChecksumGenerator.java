@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
+import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
 import net.eads.astrium.it3s.sourcechecksum.listener.ChecksumListener;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
@@ -46,12 +47,24 @@ import org.tmatesoft.svn.core.wc.SVNWCUtil;
  * 
  */
 public class SvnChecksumGenerator implements ChecksumGenerator {
-	/** The digest algorithm name. */
-	private static final String DIGEST_ALGORITHM = "SHA-256"; // SHA-256, MD5, CRC32
 	/** The default Subversion options. */
 	private static final ISVNOptions SVN_OPTIONS = SVNWCUtil.createDefaultOptions(true);
 	/** The number of executors for checksum computation. */
 	private static final int NBR_EXECUTORS = 30;
+	/*
+	 * Subversion related.
+	 */
+	/** The Subversion repository to compute checksums. */
+	private SVNRepository repository;
+	/** The root directory to compute checksums. */
+	private SvnDirectory rootDirectory;
+	/** The Subversion client thread factory. */
+	private SvnClientThreadFactory svnClientThreadFactory;
+	/*
+	 * Checksum computation related.
+	 */
+	/** The algorithm to use to compute checksum. */
+	private ChecksumAlgorithm algorithm;
 	/*
 	 * Progress related.
 	 */
@@ -63,13 +76,6 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	private volatile int progressCounter;
 	/** The file counter to compute checksum. */
 	private volatile int fileCounter;
-
-	/** The Subversion repository to compute checksums. */
-	private SVNRepository repository;
-	/** The root directory to compute checksums. */
-	private SvnDirectory rootDirectory;
-	/** The Subversion client thread factory. */
-	private SvnClientThreadFactory svnClientThreadFactory;
 
 	/**
 	 * Create Subversion repository.
@@ -137,7 +143,9 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 */
 
 	@Override
-	public AbstractDirectory compute(ChecksumListener listener) throws ChecksumException {
+	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener) throws ChecksumException {
+		// Save algorithm to use
+		this.algorithm = algorithm;
 		// TODO timers
 		long time = System.nanoTime();
 		/*
@@ -245,8 +253,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 * @throws ChecksumException
 	 *             Throw exception if the directory could not be listed.
 	 */
-	public void listDirectory(ExecutorService executorService, SvnDirectory directory, ChecksumListener listener)
-			throws ChecksumException {
+	public void listDirectory(ExecutorService executorService, SvnDirectory directory, ChecksumListener listener) throws ChecksumException {
 		/*
 		 * Handle parallel programmation.
 		 */
@@ -484,9 +491,9 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		// Create message digest
 		MessageDigest digest;
 		try {
-			digest = MessageDigest.getInstance(SvnChecksumGenerator.DIGEST_ALGORITHM);
+			digest = MessageDigest.getInstance(this.algorithm.getName());
 		} catch (NoSuchAlgorithmException exception) {
-			throw new ChecksumException("Unable to compute \""+SvnChecksumGenerator.DIGEST_ALGORITHM+"\" checksum.", exception);
+			throw new ChecksumException("Unable to compute \""+this.algorithm+"\" checksum.", exception);
 		}
 		/*
 		 * Get output stream for file content
