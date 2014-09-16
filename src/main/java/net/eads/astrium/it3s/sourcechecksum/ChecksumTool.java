@@ -310,6 +310,14 @@ public class ChecksumTool {
 	 *             Throws exception if the generator could not be built.
 	 */
 	protected static ChecksumGenerator buildSvnChecksumGenerator(String repository, String url, String user, String passwd) throws ChecksumException {
+		// Check repository leading slash
+		if (repository.charAt(repository.length()-1) == '/')
+			// Remove leading slash
+			repository = repository.substring(0, repository.length()-1);
+		// Check URL leading slash
+		if (url.charAt(url.length()-1) == '/')
+			url = url.substring(0, url.length()-1);
+		// Create new checksum generator
 		return new SvnChecksumGenerator(repository, url, user, passwd);
 	}
 
