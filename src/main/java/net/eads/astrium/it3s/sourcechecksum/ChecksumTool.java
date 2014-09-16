@@ -288,8 +288,8 @@ public class ChecksumTool {
 				return resource1.getName().compareTo(resource2.getName());
 			} else if (leftNameIndex>0&&rightNameIndex>0) {
 				// Get sub names
-				String leftSubName = leftName.substring(0, leftNameIndex-1);
-				String rightSubName = rightName.substring(0, rightNameIndex-1);
+				String leftSubName = leftName.substring(0, leftNameIndex);
+				String rightSubName = rightName.substring(0, rightNameIndex);
 				// Compare without extension
 				int compare = leftSubName.compareTo(rightSubName);
 				if (compare==0) {
@@ -302,8 +302,8 @@ public class ChecksumTool {
 				}
 			} else {
 				// Compare mixing extension presence
-				String leftSubName = leftNameIndex>0 ? leftName.substring(0, leftNameIndex-1) : leftName;
-				String rightSubName = rightNameIndex>0 ? rightName.substring(0, rightNameIndex-1) : rightName;
+				String leftSubName = leftNameIndex>0 ? leftName.substring(0, leftNameIndex): leftName;
+				String rightSubName = rightNameIndex>0 ? rightName.substring(0, rightNameIndex) : rightName;
 				return leftSubName.compareTo(rightSubName);
 			}
 		}
