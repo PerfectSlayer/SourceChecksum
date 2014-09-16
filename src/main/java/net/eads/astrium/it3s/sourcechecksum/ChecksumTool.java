@@ -532,7 +532,7 @@ public class ChecksumTool {
 						writer.newLine();
 					}
 				}
-				// Check resources
+				// Clear resources
 				leftResource = null;
 				rightResource = null;
 			}

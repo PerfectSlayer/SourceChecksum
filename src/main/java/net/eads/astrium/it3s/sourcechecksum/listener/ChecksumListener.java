@@ -32,4 +32,12 @@ public interface ChecksumListener {
 	 *            The related exception.
 	 */
 	public void onError(Exception exception);
+
+	/**
+	 * Notify a debug message.
+	 * 
+	 * @param message
+	 *            The debug message.
+	 */
+	public void onDebug(String message);
 }

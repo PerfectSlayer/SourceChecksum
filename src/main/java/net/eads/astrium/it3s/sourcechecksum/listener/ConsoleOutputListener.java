@@ -38,4 +38,9 @@ public class ConsoleOutputListener implements ChecksumListener {
 		// Display exception to the console
 		exception.printStackTrace();
 	}
+
+	@Override
+	public void onDebug(String message) {
+		System.out.println("[debug] "+message);
+	}
 }

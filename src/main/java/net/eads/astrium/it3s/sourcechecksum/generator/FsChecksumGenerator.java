@@ -63,7 +63,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// Save path to compute checksum
 		this.path = path;
 	}
-	
+
 	/*
 	 * Checksum Generator.
 	 */
@@ -72,8 +72,8 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener) throws ChecksumException {
 		// Save algorithm to use
 		this.algorithm = algorithm;
-		// TODO timers
-		long time = System.nanoTime();
+		// Save start time
+		long startTime = System.nanoTime();
 		/*
 		 * List files.
 		 */
@@ -92,7 +92,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// Get root and file counter of the file system
 		FsDirectory rootDirectory = fileVisitor.getRoot();
 		this.fileCounter = fileVisitor.getFileCounter();
-		System.out.println(this.fileCounter+" files");
+		listener.onDebug(this.fileCounter+" files found.");
 		/*
 		 * Compute checksums.
 		 */
@@ -117,11 +117,11 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 			throw new ChecksumException("An error occured while checksum computation.");
 		// Notify worker
 		listener.onDone();
-		// TODO timers
-		time = (System.nanoTime()-time)/1000000000;
-		if (time==0)
-			time = 1;
-		System.out.println("Debug: "+this.fileCounter+" hashs in "+time+"secs ("+this.fileCounter/time+" hashs/secs)");
+		// Compute elapsed time
+		long elapsedTime = (System.nanoTime()-startTime)/1000000000;
+		if (elapsedTime==0)
+			elapsedTime = 1;
+		listener.onDebug(this.fileCounter+" hashs in "+elapsedTime+" secs ("+this.fileCounter/elapsedTime+" hashs/secs)");
 		// Return root directory
 		return rootDirectory;
 	}
