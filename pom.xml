@@ -10,7 +10,7 @@
 		<dependency>
 			<groupId>org.tmatesoft.svnkit</groupId>
 			<artifactId>svnkit</artifactId>
-			<version>1.8.5</version>
+			<version>1.8.6</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-cli</groupId>
