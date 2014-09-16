@@ -1,12 +1,16 @@
 package net.eads.astrium.it3s;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Security;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
+import net.eads.astrium.it3s.sourcechecksum.ChecksumTool;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.CustomSecurityProvider;
 import net.eads.astrium.it3s.sourcechecksum.generator.FsChecksumGenerator;
@@ -97,17 +101,20 @@ public class ChecksumToolTestCase extends TestCase {
 		/*
 		 * Create checksum generator.
 		 */
-		// Create path to compute checksums
+		// Create paths to compute checksums
 		Path leftPath = Paths.get("src", "test", "resources", "files", "left");
+		Path rightPath = Paths.get("src", "test", "resources", "files", "right");
 		// Create output listener
 		ConsoleOutputListener listener = new ConsoleOutputListener();
-		// Declare checksum generator
-		FsChecksumGenerator checksumGenerator = null;
+		// Declare checksum generators
+		FsChecksumGenerator leftChecksumGenerator = null;
+		FsChecksumGenerator rightChecksumGenerator = null;
 		try {
-			// Create checksum generator
-			checksumGenerator = new FsChecksumGenerator(leftPath);
+			// Create checksum generators
+			leftChecksumGenerator = new FsChecksumGenerator(leftPath);
+			rightChecksumGenerator = new FsChecksumGenerator(rightPath);
 		} catch (ChecksumException exception) {
-			fail("Unable to create checksum generator.");
+			fail("Unable to create checksum generators.");
 		}
 		// Declare left directory
 		AbstractDirectory leftDirectory = null;
@@ -116,7 +123,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = checksumGenerator.compute(ChecksumAlgorithm.CRC32, listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.CRC32, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute CRC-32 checksums.");
 		}
@@ -152,7 +159,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = checksumGenerator.compute(ChecksumAlgorithm.MD5, listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.MD5, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute CRC-32 checksums.");
 		}
@@ -188,7 +195,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = checksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute CRC-32 checksums.");
 		}
@@ -231,5 +238,40 @@ public class ChecksumToolTestCase extends TestCase {
 		assertEquals("a.txt", children.get(1).getName());
 		assertEquals("aa.txt", children.get(2).getName());
 		assertEquals("b.txt", children.get(3).getName());
+		/*
+		 * Check diff algorithm.
+		 */
+		// Declare temporary output file
+		Path outputPath = null;
+		try {
+			outputPath = Files.createTempFile("test", ".tmp");
+		} catch (IOException exception) {
+			fail("Unable to create temporary output file.");
+		}
+		// Declare right directory
+		AbstractDirectory rightDirectory = null;
+		try {
+			// Compute checksums
+			rightDirectory = rightChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
+		} catch (ChecksumException exception) {
+			fail("Unable to compute CRC-32 checksums.");
+		}
+		try {
+			// Output diff checksums
+			ChecksumTool.outputDiffResourceChecksum(leftDirectory, rightDirectory, outputPath.toFile());
+		} catch (ChecksumException exception) {
+			fail("Unable to output diff checksums.");
+		}
+		// Check output content
+		try {
+			Iterator<String> outputLines = Files.lines(outputPath).iterator();
+			assertEquals("37288a2f2760819bf2b11484dffb9276e9cf79368d8208399b0fad6538bc1795	left/a.png		", outputLines.next());
+			assertEquals("a78846a9583325a179103cce1bc6249d388a884ef609cb32d7930c4f631f724c	left/aa.txt"
+					+"	56b6e44738b581b82279affe6ed52e63ecfda07fe4597f9b81faeff59dc6695a	right/aa.txt", outputLines.next());
+			assertEquals("		cc7416e74afdbb91c97a0b2219d61c354f3a56fe4d3f3652df8cbbda370ebf98	right/c.txt", outputLines.next());
+			assertEquals(false, outputLines.hasNext());
+		} catch (IOException exception) {
+			fail("Unable to read output diff checksums.");
+		}
 	}
 }

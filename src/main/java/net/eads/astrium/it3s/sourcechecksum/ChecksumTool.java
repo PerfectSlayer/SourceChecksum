@@ -302,10 +302,52 @@ public class ChecksumTool {
 				}
 			} else {
 				// Compare mixing extension presence
-				String leftSubName = leftNameIndex>0 ? leftName.substring(0, leftNameIndex): leftName;
+				String leftSubName = leftNameIndex>0 ? leftName.substring(0, leftNameIndex) : leftName;
 				String rightSubName = rightNameIndex>0 ? rightName.substring(0, rightNameIndex) : rightName;
 				return leftSubName.compareTo(rightSubName);
 			}
+		}
+	}
+
+	/**
+	 * Output resource checksum.
+	 * 
+	 * @param resource
+	 *            The resource to output checksum.
+	 * @param outputFile
+	 *            The output file to store checksums.
+	 * @throws ChecksumException
+	 *             Throws exception if the checksums could not be output.
+	 */
+	public static void outputResourceChecksum(AbstractResource resource, File outputFile) throws ChecksumException {
+		// Create an output writer
+		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
+			// Output resource on the writer
+			ChecksumTool.outputResourceChecksum(writer, resource);
+		} catch (IOException exception) {
+			throw new ChecksumException("Unable to write checksum file.", exception);
+		}
+	}
+
+	/**
+	 * Output different resource checksums.
+	 * 
+	 * @param leftDirectory
+	 *            The left resource to output checksum.
+	 * @param rightDirectory
+	 *            The right resource to output checksum.
+	 * @param outputFile
+	 *            The output file to store checksums.
+	 * @throws ChecksumException
+	 *             Throws exception if the checksums could not be output.
+	 */
+	public static void outputDiffResourceChecksum(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory, File outputFile) throws ChecksumException {
+		// Create an output writer
+		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
+			// Output resource on the writer
+			ChecksumTool.outputDiffResourceChecksum(writer, leftDirectory, rightDirectory);
+		} catch (IOException exception) {
+			throw new ChecksumException("Unable to write checksum file.", exception);
 		}
 	}
 
@@ -347,49 +389,6 @@ public class ChecksumTool {
 			url = url.substring(0, url.length()-1);
 		// Create new checksum generator
 		return new SvnChecksumGenerator(repository, url, user, passwd);
-	}
-
-	/**
-	 * Output resource checksum.
-	 * 
-	 * @param resource
-	 *            The resource to output checksum.
-	 * @param outputFile
-	 *            The output file to store checksums.
-	 * @throws ChecksumException
-	 *             Throws exception if the checksums could not be output.
-	 */
-	protected static void outputResourceChecksum(AbstractResource resource, File outputFile) throws ChecksumException {
-		// Create an output writer
-		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
-			// Output resource on the writer
-			ChecksumTool.outputResourceChecksum(writer, resource);
-		} catch (IOException exception) {
-			throw new ChecksumException("Unable to write checksum file.", exception);
-		}
-	}
-
-	/**
-	 * Output different resource checksums.
-	 * 
-	 * @param leftDirectory
-	 *            The left resource to output checksum.
-	 * @param rightDirectory
-	 *            The right resource to output checksum.
-	 * @param outputFile
-	 *            The output file to store checksums.
-	 * @throws ChecksumException
-	 *             Throws exception if the checksums could not be output.
-	 */
-	protected static void outputDiffResourceChecksum(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory, File outputFile)
-			throws ChecksumException {
-		// Create an output writer
-		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
-			// Output resource on the writer
-			ChecksumTool.outputDiffResourceChecksum(writer, leftDirectory, rightDirectory);
-		} catch (IOException exception) {
-			throw new ChecksumException("Unable to write checksum file.", exception);
-		}
 	}
 
 	/**
