@@ -32,7 +32,7 @@ public abstract class AbstractDirectory extends AbstractResource {
 	 */
 	public AbstractDirectory(String name) {
 		super(name);
-		this.children = new ArrayList<>(); // TODO sorted implementation
+		this.children = new ArrayList<>();
 	}
 
 	/**

@@ -337,7 +337,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					// Get external revision
 					long revision = svnExternal.getRevision().getNumber();
 					// Check external type
-					SVNNodeKind nodeKind = repository.checkPath(urlPath, revision);
+					SVNNodeKind nodeKind = this.repository.checkPath(urlPath, revision);
 					// Create external resource
 					AbstractResource externalResource;
 					if (nodeKind==SVNNodeKind.DIR) {
@@ -349,9 +349,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 						// Update file counter
 						this.fileCounter++;
 					} else {
-						// throw new ChecksumException("Unable to get external type for \""+urlPath+"\".");
-						// TODO
-						continue;
+						throw new ChecksumException("Unable to get external type for path \""+urlPath+"\".");
 					}
 					// Manually set path for external resource
 					externalResource.setPath(svnExternal.getResolvedURL().getPath());
