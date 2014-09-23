@@ -72,31 +72,31 @@ public class ChecksumTool {
 		options.addOptionGroup(modeGroup);
 		// Create path option
 		OptionBuilder.withLongOpt("path");
-		OptionBuilder.withDescription("The paths to compute checksums or differences.");
+		OptionBuilder.withDescription("The paths to compute checksums or differences");
 		OptionBuilder.hasArgs(2);
 		Option pathOption = OptionBuilder.create();
 		options.addOption(pathOption);
 		// Create repository option
 		OptionBuilder.withLongOpt("repository");
-		OptionBuilder.withDescription("The repository to compute checksums or differences.");
+		OptionBuilder.withDescription("The repository to compute checksums or differences");
 		OptionBuilder.hasArg(true);
 		Option repositoryOption = OptionBuilder.create();
 		options.addOption(repositoryOption);
 		// Create URL option
 		OptionBuilder.withLongOpt("url");
-		OptionBuilder.withDescription("The URLs of the repository to compute checksums or differences.");
+		OptionBuilder.withDescription("The URLs of the repository to compute checksums or differences");
 		OptionBuilder.hasArgs(2);
 		Option urlOption = OptionBuilder.create();
 		options.addOption(urlOption);
 		// Create user option
 		OptionBuilder.withLongOpt("user");
-		OptionBuilder.withDescription("The Subversion user name.");
+		OptionBuilder.withDescription("The Subversion user name");
 		OptionBuilder.hasArg(true);
 		Option userOption = OptionBuilder.create();
 		options.addOption(userOption);
 		// Create password option
 		OptionBuilder.withLongOpt("password");
-		OptionBuilder.withDescription("The Subversion user password.");
+		OptionBuilder.withDescription("The Subversion user password");
 		OptionBuilder.hasArg(true);
 		Option passwdOption = OptionBuilder.create();
 		options.addOption(passwdOption);
@@ -108,7 +108,7 @@ public class ChecksumTool {
 		options.addOption(algorithOption);
 		// Create output option
 		OptionBuilder.withLongOpt("output");
-		OptionBuilder.withDescription("The result output file.");
+		OptionBuilder.withDescription("The result output file");
 		OptionBuilder.hasArg(true);
 		OptionBuilder.isRequired(true);
 		Option outputOption = OptionBuilder.create();
