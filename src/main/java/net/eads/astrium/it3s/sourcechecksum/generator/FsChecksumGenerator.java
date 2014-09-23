@@ -15,6 +15,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
@@ -44,9 +45,9 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	/** The break status (<code>true</code> if the process should break, <code>false</code> otherwise). */
 	private boolean shouldBreak;
 	/** The file counter of computed checksum. */
-	private volatile int progressCounter;
+	private AtomicInteger progressCounter;
 	/** The file counter to compute checksum. */
-	private volatile int fileCounter;
+	private int fileCounter;
 
 	/**
 	 * Constructor.
@@ -98,7 +99,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		 */
 		// Initialize progress counter
 		this.shouldBreak = false;
-		this.progressCounter = 0;
+		this.progressCounter = new AtomicInteger();
 		// Notify worker
 		listener.onProgress(0);
 		// Create executer service
@@ -178,9 +179,9 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 					// Process file
 					FsChecksumGenerator.this.processFile(file);
 					// Update progress counter
-					FsChecksumGenerator.this.progressCounter++;
+					FsChecksumGenerator.this.progressCounter.incrementAndGet();
 					// Notify listener
-					listener.onProgress(FsChecksumGenerator.this.progressCounter*100/FsChecksumGenerator.this.fileCounter);
+					listener.onProgress(FsChecksumGenerator.this.progressCounter.intValue()*100/FsChecksumGenerator.this.fileCounter);
 				} catch (ChecksumException exception) {
 					// Break the process
 					FsChecksumGenerator.this.shouldBreak = true;

@@ -15,6 +15,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
@@ -73,9 +74,9 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	/** The break status (<code>true</code> if the process should break, <code>false</code> otherwise). */
 	private boolean shouldBreak;
 	/** The file counter of computed checksum. */
-	private volatile int progressCounter;
+	private AtomicInteger progressCounter;
 	/** The file counter to compute checksum. */
-	private volatile int fileCounter;
+	private AtomicInteger fileCounter;
 
 	/**
 	 * Create Subversion repository.
@@ -153,7 +154,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		 */
 		// Initialize progress
 		this.shouldBreak = false;
-		this.fileCounter = 0;
+		this.fileCounter = new AtomicInteger();
 		// Notify worker
 		listener.onStart();
 		// Create executer service
@@ -180,7 +181,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		 */
 		// Initialize progress counter
 		this.shouldBreak = false;
-		this.progressCounter = 0;
+		this.progressCounter = new AtomicInteger();
 		// Notify worker
 		listener.onProgress(0);
 		// Create executer service
@@ -203,7 +204,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		long elapsedTime = (System.nanoTime()-startTime)/1000000000;
 		if (elapsedTime==0)
 			elapsedTime = 1;
-		listener.onDebug(this.fileCounter+" hashs in "+elapsedTime+" secs ("+this.fileCounter/elapsedTime+" hashs/secs)");
+		listener.onDebug(this.fileCounter+" hashs in "+elapsedTime+" secs ("+this.fileCounter.get()/elapsedTime+" hashs/secs)");
 		// Return the root directory
 		return this.rootDirectory;
 	}
@@ -289,7 +290,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 				SvnFile file = new SvnFile(dirEntry.getName());
 				directory.addChild(file);
 				// Update file counter
-				this.fileCounter++;
+				this.fileCounter.incrementAndGet();
 			}
 			/*
 			 * Process externals.
@@ -347,7 +348,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 						// Create external file
 						externalResource = new SvnFile(externalName);
 						// Update file counter
-						this.fileCounter++;
+						this.fileCounter.incrementAndGet();
 					} else {
 						throw new ChecksumException("Unable to get external type for path \""+urlPath+"\".");
 					}
@@ -429,9 +430,9 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					// Process file
 					SvnChecksumGenerator.this.processFile(repository, file);
 					// Update progress counter
-					SvnChecksumGenerator.this.progressCounter++;
+					SvnChecksumGenerator.this.progressCounter.incrementAndGet();
 					// Notify listener
-					listener.onProgress(SvnChecksumGenerator.this.progressCounter*100/SvnChecksumGenerator.this.fileCounter);
+					listener.onProgress(SvnChecksumGenerator.this.progressCounter.intValue()*100/SvnChecksumGenerator.this.fileCounter.intValue());
 				} catch (ChecksumException exception) {
 					// Break the process
 					SvnChecksumGenerator.this.shouldBreak = true;
