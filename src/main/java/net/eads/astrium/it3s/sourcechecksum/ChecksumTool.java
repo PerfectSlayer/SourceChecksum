@@ -57,9 +57,13 @@ public class ChecksumTool {
 		// Create options declaration
 		Options options = new Options();
 		// Create list option
-		Option listOption = OptionBuilder.withLongOpt("list").withDescription("Compute checksums").create();
+		OptionBuilder.withLongOpt("list");
+		OptionBuilder.withDescription("Compute checksums");
+		Option listOption = OptionBuilder.create();
 		// Create diff option
-		Option diffOption = OptionBuilder.withLongOpt("diff").withDescription("Compute version differences").create();
+		OptionBuilder.withLongOpt("diff");
+		OptionBuilder.withDescription("Compute version differences");
+		Option diffOption = OptionBuilder.create();
 		// Create mode option group
 		OptionGroup modeGroup = new OptionGroup();
 		modeGroup.setRequired(true);
@@ -67,28 +71,47 @@ public class ChecksumTool {
 		modeGroup.addOption(listOption);
 		options.addOptionGroup(modeGroup);
 		// Create path option
-		Option pathOption = OptionBuilder.withLongOpt("path").withDescription("The paths to compute checksums or differences.").hasArgs(2).create();
+		OptionBuilder.withLongOpt("path");
+		OptionBuilder.withDescription("The paths to compute checksums or differences.");
+		OptionBuilder.hasArgs(2);
+		Option pathOption = OptionBuilder.create();
 		options.addOption(pathOption);
 		// Create repository option
-		Option repositoryOption = OptionBuilder.withLongOpt("repository").withDescription("The repository to compute checksums or differences.").hasArg(true)
-				.create();
+		OptionBuilder.withLongOpt("repository");
+		OptionBuilder.withDescription("The repository to compute checksums or differences.");
+		OptionBuilder.hasArg(true);
+		Option repositoryOption = OptionBuilder.create();
 		options.addOption(repositoryOption);
 		// Create URL option
-		Option urlOption = OptionBuilder.withLongOpt("url").withDescription("The URLs of the repository to compute checksums or differences.").hasArgs(2)
-				.create();
+		OptionBuilder.withLongOpt("url");
+		OptionBuilder.withDescription("The URLs of the repository to compute checksums or differences.");
+		OptionBuilder.hasArgs(2);
+		Option urlOption = OptionBuilder.create();
 		options.addOption(urlOption);
 		// Create user option
-		Option userOption = OptionBuilder.withLongOpt("user").withDescription("The Subversion user name.").hasArg(true).create();
+		OptionBuilder.withLongOpt("user");
+		OptionBuilder.withDescription("The Subversion user name.");
+		OptionBuilder.hasArg(true);
+		Option userOption = OptionBuilder.create();
 		options.addOption(userOption);
 		// Create password option
-		Option passwdOption = OptionBuilder.withLongOpt("passwd").withDescription("The Subversion user password.").hasArg(true).create();
+		OptionBuilder.withLongOpt("password");
+		OptionBuilder.withDescription("The Subversion user password.");
+		OptionBuilder.hasArg(true);
+		Option passwdOption = OptionBuilder.create();
 		options.addOption(passwdOption);
 		// Create algorithm option
-		Option algorithOption = OptionBuilder.withLongOpt("algorithm").withDescription("The checksum algorithm to use (CRC32, MD5 or SHA256 (default))")
-				.hasArg(true).create();
+		OptionBuilder.withLongOpt("algorithm");
+		OptionBuilder.withDescription("The checksum algorithm to use (CRC32, MD5 or SHA256 (default))");
+		OptionBuilder.hasArg(true);
+		Option algorithOption = OptionBuilder.create();
 		options.addOption(algorithOption);
 		// Create output option
-		Option outputOption = OptionBuilder.withLongOpt("output").withDescription("The result output file.").hasArg(true).isRequired(true).create();
+		OptionBuilder.withLongOpt("output");
+		OptionBuilder.withDescription("The result output file.");
+		OptionBuilder.hasArg(true);
+		OptionBuilder.isRequired(true);
+		Option outputOption = OptionBuilder.create();
 		options.addOption(outputOption);
 		// Check CLI parameters
 		if (args.length==0) {
@@ -149,8 +172,8 @@ public class ChecksumTool {
 					String user = commandLine.getOptionValue("user");
 					// Get user password
 					String passwd;
-					if (commandLine.hasOption("passwd")) {
-						passwd = commandLine.getOptionValue("passwd");
+					if (commandLine.hasOption("password")) {
+						passwd = commandLine.getOptionValue("password");
 					} else {
 						passwd = new String(ChecksumTool.readPasswd());
 					}
