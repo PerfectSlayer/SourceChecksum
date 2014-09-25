@@ -21,6 +21,5 @@ Usage
 | --output <arg> | The result output file |
 | --password <arg> | The Subversion user password |
 | --path <arg> | The paths to compute checksums or differences |
-| --repository <arg> | The repository to compute checksums or differences |
-| --url <arg> | The URLs of the repository to compute checksums or differences |
+| --url <arg> | The URLs of versionned resources to compute checksums or differences |
 | --user <arg> | The Subversion user name |
