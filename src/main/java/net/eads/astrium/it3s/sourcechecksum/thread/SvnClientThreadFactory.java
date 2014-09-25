@@ -14,8 +14,8 @@ import org.tmatesoft.svn.core.io.SVNRepository;
  *
  */
 public class SvnClientThreadFactory implements ThreadFactory {
-	/** The Subversion server root. */
-	private final String serverRoot;
+	/** The Subversion url base. */
+	private final String url;
 	/** The Subversion user name. */
 	private final String user;
 	/** The Subversion user password. */
@@ -26,16 +26,16 @@ public class SvnClientThreadFactory implements ThreadFactory {
 	/**
 	 * Constructor.
 	 * 
-	 * @param serverRoot
-	 *            The Subversion server root.
+	 * @param url
+	 *            The Subversion URL base.
 	 * @param user
 	 *            The Subversion user name.
 	 * @param passwd
 	 *            The Subversion user password.
 	 */
-	public SvnClientThreadFactory(String serverRoot, String user, String passwd) {
+	public SvnClientThreadFactory(String url, String user, String passwd) {
 		// Store Subversion client data
-		this.serverRoot = serverRoot;
+		this.url = url;
 		this.user = user;
 		this.passwd = passwd;
 		// Initialize thread counter
@@ -53,7 +53,7 @@ public class SvnClientThreadFactory implements ThreadFactory {
 		// Create Subversion repository
 		SVNRepository repository;
 		try {
-			repository = SvnChecksumGenerator.createRepository(serverRoot, user, passwd);
+			repository = SvnChecksumGenerator.createRepository(this.url, this.user, this.passwd);
 		} catch (ChecksumException exception) {
 			// Failed to create thread
 			return null;

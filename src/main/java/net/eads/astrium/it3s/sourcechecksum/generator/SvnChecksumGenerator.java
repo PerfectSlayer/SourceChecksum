@@ -119,10 +119,8 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	/**
 	 * Constructor.
 	 * 
-	 * @param serverRoot
-	 *            The Subversion server root.
-	 * @param path
-	 *            The release path to compute checksum (must be a directory).
+	 * @param url
+	 *            The Subversion URL to compute checksum (must be a directory).
 	 * @param user
 	 *            The Subversion user name.
 	 * @param passwd
@@ -130,13 +128,26 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 * @throws ChecksumException
 	 *             Throws exception if the generator could not be created.
 	 */
-	public SvnChecksumGenerator(final String serverRoot, String path, final String user, final String passwd) throws ChecksumException {
+	public SvnChecksumGenerator(final String url, final String user, final String passwd) throws ChecksumException {
 		// Create repository
-		this.repository = SvnChecksumGenerator.createRepository(serverRoot, user, passwd);
+		this.repository = SvnChecksumGenerator.createRepository(url, user, passwd);
+		// Get Subversion root URL
+		SVNURL rootUrl = null;
+		try {
+			rootUrl = this.repository.getRepositoryRoot(true);
+		} catch (SVNException exception) {
+			throw new ChecksumException("Unable to get the Subversion root URL.", exception);
+		}
+		// Check Subversion root URL
+		String rootUrlString = rootUrl.toString();
+		if (!url.startsWith(rootUrlString)) 
+			throw new ChecksumException("An error happend retrieving resource location.");
+		// Get resource URL
+		String resourceUrl = url.substring(rootUrlString.length());
 		// Create root directory
-		this.rootDirectory = new SvnDirectory(path);
+		this.rootDirectory = new SvnDirectory(resourceUrl);
 		// Create SVN client thread factory
-		this.svnClientThreadFactory = new SvnClientThreadFactory(serverRoot, user, passwd);
+		this.svnClientThreadFactory = new SvnClientThreadFactory(url, user, passwd);
 	}
 
 	/*
@@ -264,14 +275,14 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		Thread currentThread = Thread.currentThread();
 		if (currentThread instanceof SvnClientThread)
 			// Get Subversion repository from Subversion client thread
-			repository = ((SvnClientThread) Thread.currentThread()).getRepository();
+			this.repository = ((SvnClientThread) Thread.currentThread()).getRepository();
 		// Get directory path
 		String path = directory.getPath();
 		try {
 			// Get properties of directory
 			SVNProperties properties = new SVNProperties();
 			// Get path entries
-			Collection<?> entries = repository.getDir(path, -1, properties, (Collection<?>) null);
+			Collection<?> entries = this.repository.getDir(path, -1, properties, (Collection<?>) null);
 			// Process each entry
 			for (Object entry : entries) {
 				SVNDirEntry dirEntry = (SVNDirEntry) entry;
@@ -308,7 +319,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 				// Process each external
 				for (SVNExternal svnExternal : svnExternals) {
 					// Resolve external URL
-					SVNURL rootUrl = repository.getRepositoryRoot(false);
+					SVNURL rootUrl = this.repository.getRepositoryRoot(false);
 					SVNURL ownerUrl = rootUrl.appendPath(path, false);
 					svnExternal.resolveURL(rootUrl, ownerUrl);
 					/*
@@ -350,7 +361,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 						// Update file counter
 						this.fileCounter.incrementAndGet();
 					} else {
-						throw new ChecksumException("Unable to get external type for path \""+urlPath+"\".");
+						 throw new ChecksumException("Unable to get external type for path \""+urlPath+"\".");
 					}
 					// Manually set path for external resource
 					externalResource.setPath(svnExternal.getResolvedURL().getPath());

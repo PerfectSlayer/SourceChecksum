@@ -80,15 +80,9 @@ public class ChecksumTool {
 		OptionBuilder.hasArgs(2);
 		Option pathOption = OptionBuilder.create();
 		options.addOption(pathOption);
-		// Create repository option
-		OptionBuilder.withLongOpt("repository");
-		OptionBuilder.withDescription("The repository to compute checksums or differences");
-		OptionBuilder.hasArg(true);
-		Option repositoryOption = OptionBuilder.create();
-		options.addOption(repositoryOption);
 		// Create URL option
 		OptionBuilder.withLongOpt("url");
-		OptionBuilder.withDescription("The URLs of the repository to compute checksums or differences");
+		OptionBuilder.withDescription("The URLs of Subversion resources to compute checksums or differences");
 		OptionBuilder.hasArgs(2);
 		Option urlOption = OptionBuilder.create();
 		options.addOption(urlOption);
@@ -167,11 +161,10 @@ public class ChecksumTool {
 					listener.onError(exception);
 					System.exit(0);
 				}
-			} else if (commandLine.hasOption("repository")&&commandLine.hasOption("url")) {
+			} else if (commandLine.hasOption("url")) {
 				// Create checksum generator on Subversion
 				try {
 					// Get checksum generator parameters
-					String repository = commandLine.getOptionValue("repository");
 					String url = commandLine.getOptionValue("url");
 					String user = commandLine.getOptionValue("user");
 					// Get user password
@@ -182,7 +175,7 @@ public class ChecksumTool {
 						passwd = new String(ChecksumTool.readPasswd());
 					}
 					// Create checksum generator
-					checksumGenerator = ChecksumTool.buildSvnChecksumGenerator(repository, url, user, passwd);
+					checksumGenerator = ChecksumTool.buildSvnChecksumGenerator(url, user, passwd);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
 					listener.onError(exception);
@@ -190,7 +183,7 @@ public class ChecksumTool {
 				}
 			} else {
 				// Notify user then exit
-				System.err.println("Missing path or repository and url parameters.");
+				System.err.println("Missing path or url parameters.");
 				System.exit(0);
 			}
 			try {
@@ -228,11 +221,10 @@ public class ChecksumTool {
 					listener.onError(exception);
 					System.exit(0);
 				}
-			} else if (commandLine.hasOption("repository")&&commandLine.hasOption("url")) {
+			} else if (commandLine.hasOption("url")) {
 				// Create checksum generator on Subversion
 				try {
-					// Get repository parameters for checksum generators
-					String repository = commandLine.getOptionValue("repository");
+					// Get user parameter for checksum generators
 					String user = commandLine.getOptionValue("user");
 					// Get user password
 					String passwd;
@@ -249,8 +241,8 @@ public class ChecksumTool {
 						System.exit(0);
 					}
 					// Create checksum generators
-					leftChecksumGenerator = ChecksumTool.buildSvnChecksumGenerator(repository, urls[0], user, passwd);
-					rightChecksumGenerator = ChecksumTool.buildSvnChecksumGenerator(repository, urls[1], user, passwd);
+					leftChecksumGenerator = ChecksumTool.buildSvnChecksumGenerator(urls[0], user, passwd);
+					rightChecksumGenerator = ChecksumTool.buildSvnChecksumGenerator(urls[1], user, passwd);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
 					listener.onError(exception);
@@ -258,7 +250,7 @@ public class ChecksumTool {
 				}
 			} else {
 				// Notify user then exit
-				System.err.println("Missing path or repository and url parameters.");
+				System.err.println("Missing path or url parameters.");
 				System.exit(0);
 			}
 			try {
@@ -488,10 +480,8 @@ public class ChecksumTool {
 	/**
 	 * Create Subversion system checksum generator.
 	 * 
-	 * @param repository
-	 *            The Subversion repository to compute checksums.
 	 * @param url
-	 *            The URL to compute checksums.
+	 *            The URL of Subversion resources to compute checksums.
 	 * @param user
 	 *            The Subversion user name.
 	 * @param passwd
@@ -500,16 +490,12 @@ public class ChecksumTool {
 	 * @throws ChecksumException
 	 *             Throws exception if the generator could not be built.
 	 */
-	protected static ChecksumGenerator buildSvnChecksumGenerator(String repository, String url, String user, String passwd) throws ChecksumException {
-		// Check repository leading slash
-		if (repository.charAt(repository.length()-1)=='/')
-			// Remove leading slash
-			repository = repository.substring(0, repository.length()-1);
+	protected static ChecksumGenerator buildSvnChecksumGenerator(String url, String user, String passwd) throws ChecksumException {
 		// Check URL leading slash
 		if (url.charAt(url.length()-1)=='/')
 			url = url.substring(0, url.length()-1);
 		// Create new checksum generator
-		return new SvnChecksumGenerator(repository, url, user, passwd);
+		return new SvnChecksumGenerator(url, user, passwd);
 	}
 
 	/**
