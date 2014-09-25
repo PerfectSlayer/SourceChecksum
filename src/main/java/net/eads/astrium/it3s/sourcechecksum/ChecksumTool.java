@@ -14,6 +14,10 @@ import java.util.Iterator;
 
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.CustomSecurityProvider;
+import net.eads.astrium.it3s.sourcechecksum.difference.FileDifferenceType;
+import net.eads.astrium.it3s.sourcechecksum.difference.AbstractDifference;
+import net.eads.astrium.it3s.sourcechecksum.difference.DirectoryDifference;
+import net.eads.astrium.it3s.sourcechecksum.difference.FileDifference;
 import net.eads.astrium.it3s.sourcechecksum.generator.ChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.generator.FsChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.generator.SvnChecksumGenerator;
@@ -333,6 +337,98 @@ public class ChecksumTool {
 	}
 
 	/**
+	 * Compute differences between two directories.
+	 * 
+	 * @param leftDirectory
+	 *            The left resource to compute differences.
+	 * @param rightDirectory
+	 *            The right resource to compute differences.
+	 * @return The directory difference.
+	 */
+	public static DirectoryDifference computeDifferences(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory) {
+		// Create resource iterator on directories
+		Iterator<AbstractResource> leftResourceIterator = leftDirectory==null ? new EmptyIterator<AbstractResource>() : leftDirectory.getChildren().iterator();
+		Iterator<AbstractResource> rightResourceIterator = rightDirectory==null ? new EmptyIterator<AbstractResource>() : rightDirectory.getChildren()
+				.iterator();
+		// Declare resources to compare
+		AbstractResource leftResource = null;
+		AbstractResource rightResource = null;
+		// Declare resource difference for the compared directory
+		DirectoryDifference directoryDifference = new DirectoryDifference(leftDirectory, rightDirectory);
+		// Generate output while remains resources
+		while (leftResourceIterator.hasNext()||rightResourceIterator.hasNext()) {
+			/*
+			 * Take new resources.
+			 */
+			// Check if left must be taken
+			if (leftResource==null&&leftResourceIterator.hasNext())
+				leftResource = leftResourceIterator.next();
+			// Check if right must be taken
+			if (rightResource==null&&rightResourceIterator.hasNext())
+				rightResource = rightResourceIterator.next();
+			/*
+			 * Compare resources.
+			 */
+			// Compare resource
+			int compare = ChecksumTool.compareResource(leftResource, rightResource);
+			// Check resource equality
+			if (compare<0) {
+				if (leftResource instanceof AbstractDirectory) {
+					// Compute and add left directory differences
+					DirectoryDifference leftDirectoryDifference = ChecksumTool.computeDifferences((AbstractDirectory) leftResource, null);
+					// Check if left directory has differences
+					if (leftDirectoryDifference.hasDifference())
+						directoryDifference.addDifference(leftDirectoryDifference);
+				} else if (leftResource instanceof AbstractFile) {
+					// Create and add left only difference
+					AbstractDifference leftOnlyDifference = new FileDifference(FileDifferenceType.LEFT_ONLY, (AbstractFile) leftResource, null);
+					directoryDifference.addDifference(leftOnlyDifference);
+				}
+				// Clear resource
+				leftResource = null;
+			} else if (compare>0) {
+				if (rightResource instanceof AbstractDirectory) {
+					// Compute and add right directory differences
+					DirectoryDifference rightDirectoryDifference = ChecksumTool.computeDifferences(null, (AbstractDirectory) rightResource);
+					// Check if right directory has differences
+					if (rightDirectoryDifference.hasDifference())
+						directoryDifference.addDifference(rightDirectoryDifference);
+				} else if (rightResource instanceof AbstractFile) {
+					// Create and add right only difference
+					AbstractDifference rightOnlyDifference = new FileDifference(FileDifferenceType.RIGHT_ONLY, null, (AbstractFile) rightResource);
+					directoryDifference.addDifference(rightOnlyDifference);
+				}
+				// Clear resource
+				rightResource = null;
+			} else if (compare==0) {
+				if (leftResource instanceof AbstractDirectory&&rightDirectory instanceof AbstractDirectory) {
+					// Recursively compute directory differences
+					DirectoryDifference subDirectoryDifference = ChecksumTool.computeDifferences((AbstractDirectory) leftResource,
+							(AbstractDirectory) rightResource);
+					// Check if sub-directory has differences
+					if (subDirectoryDifference.hasDifference())
+						directoryDifference.addDifference(subDirectoryDifference);
+				} else if (leftResource instanceof AbstractFile&&rightResource instanceof AbstractFile) {
+					// Compare file checksums
+					AbstractFile leftFile = (AbstractFile) leftResource;
+					AbstractFile rightFile = (AbstractFile) rightResource;
+					if (!Arrays.equals(leftFile.getChecksum(), rightFile.getChecksum())) {
+						// Create and add different difference
+						AbstractDifference differentDifference = new FileDifference(FileDifferenceType.DIFFERENT, (AbstractFile) leftResource,
+								(AbstractFile) rightResource);
+						directoryDifference.addDifference(differentDifference);
+					}
+				}
+				// Clear resources
+				leftResource = null;
+				rightResource = null;
+			}
+		}
+		// Return directory difference
+		return directoryDifference;
+	}
+
+	/**
 	 * Output resource checksum.
 	 * 
 	 * @param resource
@@ -367,8 +463,10 @@ public class ChecksumTool {
 	public static void outputDiffResourceChecksum(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory, File outputFile) throws ChecksumException {
 		// Create an output writer
 		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
-			// Output resource on the writer
-			ChecksumTool.outputDiffResourceChecksum(writer, leftDirectory, rightDirectory);
+			// Compute differences
+			DirectoryDifference directoryDifference = ChecksumTool.computeDifferences(leftDirectory, rightDirectory);
+			// Output differences on the writer
+			ChecksumTool.outputDiffResourceChecksum(writer, directoryDifference);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to write checksum file.", exception);
 		}
@@ -459,105 +557,60 @@ public class ChecksumTool {
 	 * 
 	 * @param writer
 	 *            The writer to output checksum.
-	 * @param leftDirectory
-	 *            The left resource to output checksum.
-	 * @param rightDirectory
-	 *            The right resource to output checksum.
+	 * @param directoryDifference
+	 *            The directory differences to output.
 	 * @throws IOException
 	 *             Throws exception if the checksum could not be output.
 	 */
-	protected static void outputDiffResourceChecksum(BufferedWriter writer, AbstractDirectory leftDirectory, AbstractDirectory rightDirectory)
-			throws IOException {
-
-		Iterator<AbstractResource> leftResourceIterator = leftDirectory==null ? new EmptyIterator<AbstractResource>() : leftDirectory.getChildren().iterator();
-		Iterator<AbstractResource> rightResourceIterator = rightDirectory==null ? new EmptyIterator<AbstractResource>() : rightDirectory.getChildren()
-				.iterator();
-
-		AbstractResource leftResource = null;
-		AbstractResource rightResource = null;
-
-		// Generate output while remains resources
-		while (leftResourceIterator.hasNext()||rightResourceIterator.hasNext()) {
-			/*
-			 * Take new resources.
-			 */
-			// Check if left must be taken
-			if (leftResource==null&&leftResourceIterator.hasNext())
-				leftResource = leftResourceIterator.next();
-			// Check if right must be taken
-			if (rightResource==null&&rightResourceIterator.hasNext())
-				rightResource = rightResourceIterator.next();
-			/*
-			 * Compare resources.
-			 */
-			// Compare resource
-			int compare = ChecksumTool.compareResource(leftResource, rightResource);
-			// Check resource equality
-			if (compare<0) {
-				if (leftResource instanceof AbstractDirectory) {
-					// Output left directory
-					ChecksumTool.outputDiffResourceChecksum(writer, (AbstractDirectory) leftResource, null);
-				} else if (leftResource instanceof AbstractFile) {
-					// Output left file
-					AbstractFile leftFile = (AbstractFile) leftResource;
-					StringBuilder stringBuilder = new StringBuilder();
+	protected static void outputDiffResourceChecksum(BufferedWriter writer, DirectoryDifference directoryDifference) throws IOException {
+		// Output each directory difference
+		for (AbstractDifference difference : directoryDifference.getDifferences()) {
+			// Check difference type
+			if (difference instanceof DirectoryDifference) {
+				// Recursively output sub-directory difference
+				ChecksumTool.outputDiffResourceChecksum(writer, (DirectoryDifference) difference);
+			} else if (difference instanceof FileDifference) {
+				FileDifference fileDifference = (FileDifference) difference;
+				// Get left and right related files
+				AbstractFile leftFile = (AbstractFile) fileDifference.getLeftResource();
+				AbstractFile rightFile = (AbstractFile) fileDifference.getRightResource();
+				// Create output string builder
+				StringBuilder stringBuilder = new StringBuilder();
+				switch (fileDifference.getType()) {
+				case LEFT_ONLY:
+					// Output left file checksum
 					for (byte b : leftFile.getChecksum())
 						stringBuilder.append(String.format("%02x", b));
 					stringBuilder.append('\t');
 					stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
 					stringBuilder.append('\t');
 					stringBuilder.append('\t');
-					writer.write(stringBuilder.toString());
-					writer.newLine();
-				}
-				// Clear resource
-				leftResource = null;
-			} else if (compare>0) {
-				if (rightResource instanceof AbstractDirectory) {
-					// Output left directory
-					ChecksumTool.outputDiffResourceChecksum(writer, null, (AbstractDirectory) rightResource);
-				} else if (rightResource instanceof AbstractFile) {
-					// Output right file
-					AbstractFile rightFile = (AbstractFile) rightResource;
-					StringBuilder stringBuilder = new StringBuilder();
+					break;
+				case DIFFERENT:
+					// Output file checksums
+					for (byte b : leftFile.getChecksum())
+						stringBuilder.append(String.format("%02x", b));
+					stringBuilder.append('\t');
+					stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
+					stringBuilder.append('\t');
+					for (byte b : rightFile.getChecksum())
+						stringBuilder.append(String.format("%02x", b));
+					stringBuilder.append('\t');
+					stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
+					break;
+				case RIGHT_ONLY:
+					// Output right file checksums
 					stringBuilder.append('\t');
 					stringBuilder.append('\t');
 					for (byte b : rightFile.getChecksum())
 						stringBuilder.append(String.format("%02x", b));
 					stringBuilder.append('\t');
 					stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
-					writer.write(stringBuilder.toString());
-					writer.newLine();
+					break;
 				}
-				// Clear resource
-				rightResource = null;
-			} else if (compare==0) {
-				if (leftResource instanceof AbstractDirectory&&rightDirectory instanceof AbstractDirectory) {
-					// Recursively output directory content
-					ChecksumTool.outputDiffResourceChecksum(writer, (AbstractDirectory) leftResource, (AbstractDirectory) rightResource);
-				} else if (leftResource instanceof AbstractFile&&rightResource instanceof AbstractFile) {
-					// Compare file checksums
-					AbstractFile leftFile = (AbstractFile) leftResource;
-					AbstractFile rightFile = (AbstractFile) rightResource;
-					if (!Arrays.equals(leftFile.getChecksum(), rightFile.getChecksum())) {
-						// Output file checksums
-						StringBuilder stringBuilder = new StringBuilder();
-						for (byte b : leftFile.getChecksum())
-							stringBuilder.append(String.format("%02x", b));
-						stringBuilder.append('\t');
-						stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
-						stringBuilder.append('\t');
-						for (byte b : rightFile.getChecksum())
-							stringBuilder.append(String.format("%02x", b));
-						stringBuilder.append('\t');
-						stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
-						writer.write(stringBuilder.toString());
-						writer.newLine();
-					}
-				}
-				// Clear resources
-				leftResource = null;
-				rightResource = null;
+				// Append the file difference
+				writer.write(stringBuilder.toString());
+				writer.newLine();
 			}
 		}
 	}
