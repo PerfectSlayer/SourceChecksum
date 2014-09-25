@@ -1,11 +1,13 @@
 package net.eads.astrium.it3s;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 import junit.framework.Test;
@@ -259,13 +261,26 @@ public class ChecksumToolTestCase extends TestCase {
 			fail("Unable to output diff checksums.");
 		}
 		// Check output content
-		try {
-			Iterator<String> outputLines = Files.lines(outputPath).iterator();
-			assertEquals("37288a2f2760819bf2b11484dffb9276e9cf79368d8208399b0fad6538bc1795	left/a.png		", outputLines.next());
-			assertEquals("a78846a9583325a179103cce1bc6249d388a884ef609cb32d7930c4f631f724c	left/aa.txt"
-					+"	56b6e44738b581b82279affe6ed52e63ecfda07fe4597f9b81faeff59dc6695a	right/aa.txt", outputLines.next());
-			assertEquals("		cc7416e74afdbb91c97a0b2219d61c354f3a56fe4d3f3652df8cbbda370ebf98	right/c.txt", outputLines.next());
-			assertEquals(false, outputLines.hasNext());
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(outputPath.toFile())))) {
+			String line = null;
+			int lineNumber = 0;
+			while ((line = reader.readLine()) != null) {
+				switch (lineNumber++) {
+				case 0:
+					assertEquals("37288a2f2760819bf2b11484dffb9276e9cf79368d8208399b0fad6538bc1795	left/a.png		", line);
+					break;
+				case 1:
+					assertEquals("a78846a9583325a179103cce1bc6249d388a884ef609cb32d7930c4f631f724c	left/aa.txt"
+							+"	56b6e44738b581b82279affe6ed52e63ecfda07fe4597f9b81faeff59dc6695a	right/aa.txt", line);
+					break;
+				case 2:
+					assertEquals("		cc7416e74afdbb91c97a0b2219d61c354f3a56fe4d3f3652df8cbbda370ebf98	right/c.txt", line);
+					break;
+				default:
+					fail("No more diff should be found.");
+					break;
+				}
+			}
 		} catch (IOException exception) {
 			fail("Unable to read output diff checksums.");
 		}

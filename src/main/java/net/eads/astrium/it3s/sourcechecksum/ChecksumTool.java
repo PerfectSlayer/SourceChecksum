@@ -3,9 +3,10 @@ package net.eads.astrium.it3s.sourcechecksum;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
+import java.io.OutputStreamWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -428,7 +429,7 @@ public class ChecksumTool {
 	 */
 	public static void outputResourceChecksum(AbstractResource resource, File outputFile) throws ChecksumException {
 		// Create an output writer
-		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
+		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile)))) {
 			// Output resource on the writer
 			ChecksumTool.outputResourceChecksum(writer, resource);
 		} catch (IOException exception) {
@@ -450,7 +451,7 @@ public class ChecksumTool {
 	 */
 	public static void outputDiffResourceChecksum(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory, File outputFile) throws ChecksumException {
 		// Create an output writer
-		try (BufferedWriter writer = Files.newBufferedWriter(outputFile.toPath())) {
+		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile)))) {
 			// Compute differences
 			DirectoryDifference directoryDifference = ChecksumTool.computeDifferences(leftDirectory, rightDirectory);
 			// Output differences on the writer
@@ -602,6 +603,11 @@ public class ChecksumTool {
 		@Override
 		public E next() {
 			return null;
+		}
+
+		@Override
+		public void remove() {
+			// Nothing to remove
 		}
 	}
 }

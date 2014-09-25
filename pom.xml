@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.eads.astrium.it3s</groupId>
-	<artifactId>source-checksum</artifactId>
+	<artifactId>source-checksum-backport</artifactId>
 	<packaging>jar</packaging>
 	<version>1.2-SNAPSHOT</version>
-	<name>source-checksum</name>
+	<name>source-checksum-backport</name>
 	<url>http://maven.apache.org</url>
 	<dependencies>
 		<dependency>
@@ -37,8 +37,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.1</version>
 				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
+					<source>1.7</source>
+					<target>1.7</target>
 				</configuration>
 			</plugin>
 			<plugin>
