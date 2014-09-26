@@ -4,23 +4,21 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.Security;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
 import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
 import net.eads.astrium.it3s.sourcechecksum.ChecksumTool;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
-import net.eads.astrium.it3s.sourcechecksum.algorithm.CustomSecurityProvider;
 import net.eads.astrium.it3s.sourcechecksum.generator.FsChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.listener.ConsoleOutputListener;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractFile;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 /**
  * This class is a test case for the checksum tools.
@@ -78,8 +76,6 @@ public class ChecksumToolTestCase extends TestCase {
 	 * @return The created suite of tests.
 	 */
 	public static Test suite() {
-		// Add custom security provider
-		Security.addProvider(new CustomSecurityProvider());
 		// Return test suite
 		return new TestSuite(ChecksumToolTestCase.class);
 	}

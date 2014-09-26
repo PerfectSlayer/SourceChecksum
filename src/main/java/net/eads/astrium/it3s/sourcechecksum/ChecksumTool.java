@@ -8,12 +8,10 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.Security;
 import java.util.Arrays;
 import java.util.Iterator;
 
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
-import net.eads.astrium.it3s.sourcechecksum.algorithm.CustomSecurityProvider;
 import net.eads.astrium.it3s.sourcechecksum.difference.AbstractDifference;
 import net.eads.astrium.it3s.sourcechecksum.difference.DirectoryDifference;
 import net.eads.astrium.it3s.sourcechecksum.difference.FileDifference;
@@ -133,8 +131,6 @@ public class ChecksumTool {
 		/*
 		 * Start tool.
 		 */
-		// Add custom security provider
-		Security.addProvider(new CustomSecurityProvider());
 		// Get checksum algorithm
 		ChecksumAlgorithm algorithm = null;
 		try {

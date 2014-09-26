@@ -1,5 +1,7 @@
 package net.eads.astrium.it3s.sourcechecksum.algorithm;
 
+import java.security.Security;
+
 /**
  * This enumeration represents available algorithms to compute checksums.
  * 
@@ -13,6 +15,11 @@ public enum ChecksumAlgorithm {
 	MD5("MD5"),
 	/** The SHA-256 algorithm. */
 	SHA256("SHA-256");
+	
+	static {
+		// Add custom security provider
+		Security.addProvider(new CustomSecurityProvider());
+	}
 
 	/** The algorithm name. */
 	private final String name;
