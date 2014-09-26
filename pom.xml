@@ -3,7 +3,7 @@
 	<groupId>net.eads.astrium.it3s</groupId>
 	<artifactId>source-checksum</artifactId>
 	<packaging>jar</packaging>
-	<version>1.1-SNAPSHOT</version>
+	<version>1.2-SNAPSHOT</version>
 	<name>source-checksum</name>
 	<url>http://maven.apache.org</url>
 	<dependencies>
