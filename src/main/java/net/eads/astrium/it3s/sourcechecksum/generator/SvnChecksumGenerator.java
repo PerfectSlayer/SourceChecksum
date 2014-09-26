@@ -140,10 +140,13 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		}
 		// Check Subversion root URL
 		String rootUrlString = rootUrl.toString();
-		if (!url.startsWith(rootUrlString)) 
+		if (!url.startsWith(rootUrlString))
 			throw new ChecksumException("An error happend retrieving resource location.");
 		// Get resource URL
 		String resourceUrl = url.substring(rootUrlString.length());
+		// Check URL leading slash
+		if (resourceUrl.charAt(resourceUrl.length()-1)=='/')
+			resourceUrl = resourceUrl.substring(0, resourceUrl.length()-1);
 		// Create root directory
 		this.rootDirectory = new SvnDirectory(resourceUrl);
 		// Create SVN client thread factory
@@ -361,7 +364,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 						// Update file counter
 						this.fileCounter.incrementAndGet();
 					} else {
-						 throw new ChecksumException("Unable to get external type for path \""+urlPath+"\".");
+						throw new ChecksumException("Unable to get external type for path \""+urlPath+"\".");
 					}
 					// Manually set path for external resource
 					externalResource.setPath(svnExternal.getResolvedURL().getPath());

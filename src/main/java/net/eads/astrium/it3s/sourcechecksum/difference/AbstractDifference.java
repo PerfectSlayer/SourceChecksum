@@ -10,9 +10,9 @@ import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
  */
 public abstract class AbstractDifference {
 	/** The left resource related to the difference (may be <code>null</code> if missing from the left part). */
-	private final AbstractResource leftResource;
+	protected final AbstractResource leftResource;
 	/** The right resource related to the difference (may be <code>null</code> if missing from the right part). */
-	private final AbstractResource rightResource;
+	protected final AbstractResource rightResource;
 
 	/**
 	 * Constructor.
@@ -26,23 +26,5 @@ public abstract class AbstractDifference {
 		// Save difference resources
 		this.leftResource = leftResource;
 		this.rightResource = rightResource;
-	}
-
-	/**
-	 * Get the left resource related to the difference.
-	 * 
-	 * @return The left resource related to the difference (may be <code>null</code> if missing from the left part).
-	 */
-	public AbstractResource getLeftResource() {
-		return this.leftResource;
-	}
-
-	/**
-	 * Get the right resource related to the difference.
-	 * 
-	 * @return The right resource related to the difference (may be <code>null</code> if missing from the left part).
-	 */
-	public AbstractResource getRightResource() {
-		return this.rightResource;
 	}
 }

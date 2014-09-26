@@ -36,4 +36,22 @@ public class FileDifference extends AbstractDifference {
 	public FileDifferenceType getType() {
 		return this.type;
 	}
+
+	/**
+	 * Get the left file related to the difference.
+	 * 
+	 * @return The left file related to the difference (may be <code>null</code> if missing from the left part).
+	 */
+	public AbstractFile getLeftFile() {
+		return (AbstractFile) this.leftResource;
+	}
+
+	/**
+	 * Get the right file related to the difference.
+	 * 
+	 * @return The right file related to the difference (may be <code>null</code> if missing from the left part).
+	 */
+	public AbstractFile getRightFile() {
+		return (AbstractFile) this.rightResource;
+	}
 }

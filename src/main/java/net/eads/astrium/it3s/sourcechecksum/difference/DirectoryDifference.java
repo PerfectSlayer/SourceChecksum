@@ -56,4 +56,22 @@ public class DirectoryDifference extends AbstractDifference {
 	public List<AbstractDifference> getDifferences() {
 		return this.differences;
 	}
+
+	/**
+	 * Get the left directory related to the difference.
+	 * 
+	 * @return The left directory related to the difference (may be <code>null</code> if missing from the left part).
+	 */
+	public AbstractDirectory getLeftDirectory() {
+		return (AbstractDirectory) this.leftResource;
+	}
+
+	/**
+	 * Get the right directory related to the difference.
+	 * 
+	 * @return The right directory related to the difference (may be <code>null</code> if missing from the left part).
+	 */
+	public AbstractDirectory getRightDirectory() {
+		return (AbstractDirectory) this.rightResource;
+	}
 }

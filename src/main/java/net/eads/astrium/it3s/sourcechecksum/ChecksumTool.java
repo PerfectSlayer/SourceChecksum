@@ -14,10 +14,10 @@ import java.util.Iterator;
 
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.CustomSecurityProvider;
-import net.eads.astrium.it3s.sourcechecksum.difference.FileDifferenceType;
 import net.eads.astrium.it3s.sourcechecksum.difference.AbstractDifference;
 import net.eads.astrium.it3s.sourcechecksum.difference.DirectoryDifference;
 import net.eads.astrium.it3s.sourcechecksum.difference.FileDifference;
+import net.eads.astrium.it3s.sourcechecksum.difference.FileDifferenceType;
 import net.eads.astrium.it3s.sourcechecksum.generator.ChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.generator.FsChecksumGenerator;
 import net.eads.astrium.it3s.sourcechecksum.generator.SvnChecksumGenerator;
@@ -155,7 +155,7 @@ public class ChecksumTool {
 				// Create checksum generator on file system
 				try {
 					Path path = Paths.get(commandLine.getOptionValue("path"));
-					checksumGenerator = ChecksumTool.buildFsChecksumGenerator(path);
+					checksumGenerator = new FsChecksumGenerator(path);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
 					listener.onError(exception);
@@ -175,7 +175,7 @@ public class ChecksumTool {
 						passwd = new String(ChecksumTool.readPasswd());
 					}
 					// Create checksum generator
-					checksumGenerator = ChecksumTool.buildSvnChecksumGenerator(url, user, passwd);
+					checksumGenerator = new SvnChecksumGenerator(url, user, passwd);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
 					listener.onError(exception);
@@ -214,8 +214,8 @@ public class ChecksumTool {
 					Path leftPath = Paths.get(paths[0]);
 					Path rightPath = Paths.get(paths[1]);
 					// Create checksum generators
-					leftChecksumGenerator = ChecksumTool.buildFsChecksumGenerator(leftPath);
-					rightChecksumGenerator = ChecksumTool.buildFsChecksumGenerator(rightPath);
+					leftChecksumGenerator = new FsChecksumGenerator(leftPath);
+					rightChecksumGenerator = new FsChecksumGenerator(rightPath);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
 					listener.onError(exception);
@@ -241,8 +241,8 @@ public class ChecksumTool {
 						System.exit(0);
 					}
 					// Create checksum generators
-					leftChecksumGenerator = ChecksumTool.buildSvnChecksumGenerator(urls[0], user, passwd);
-					rightChecksumGenerator = ChecksumTool.buildSvnChecksumGenerator(urls[1], user, passwd);
+					leftChecksumGenerator = new SvnChecksumGenerator(urls[0], user, passwd);
+					rightChecksumGenerator = new SvnChecksumGenerator(urls[1], user, passwd);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
 					listener.onError(exception);
@@ -465,40 +465,6 @@ public class ChecksumTool {
 	}
 
 	/**
-	 * Create file system checksum generator.
-	 * 
-	 * @param path
-	 *            The path to compute checksums.
-	 * @return The built file system checksum generator.
-	 * @throws ChecksumException
-	 *             Throws exception if the generator could not be built.
-	 */
-	protected static ChecksumGenerator buildFsChecksumGenerator(Path path) throws ChecksumException {
-		return new FsChecksumGenerator(path);
-	}
-
-	/**
-	 * Create Subversion system checksum generator.
-	 * 
-	 * @param url
-	 *            The URL of Subversion resources to compute checksums.
-	 * @param user
-	 *            The Subversion user name.
-	 * @param passwd
-	 *            The Subversion user password.
-	 * @return The built Subversion checksum generator.
-	 * @throws ChecksumException
-	 *             Throws exception if the generator could not be built.
-	 */
-	protected static ChecksumGenerator buildSvnChecksumGenerator(String url, String user, String passwd) throws ChecksumException {
-		// Check URL leading slash
-		if (url.charAt(url.length()-1)=='/')
-			url = url.substring(0, url.length()-1);
-		// Create new checksum generator
-		return new SvnChecksumGenerator(url, user, passwd);
-	}
-
-	/**
 	 * Output resource checksum.
 	 * 
 	 * @param writer
@@ -558,8 +524,8 @@ public class ChecksumTool {
 			} else if (difference instanceof FileDifference) {
 				FileDifference fileDifference = (FileDifference) difference;
 				// Get left and right related files
-				AbstractFile leftFile = (AbstractFile) fileDifference.getLeftResource();
-				AbstractFile rightFile = (AbstractFile) fileDifference.getRightResource();
+				AbstractFile leftFile = fileDifference.getLeftFile();
+				AbstractFile rightFile = fileDifference.getRightFile();
 				// Create output string builder
 				StringBuilder stringBuilder = new StringBuilder();
 				switch (fileDifference.getType()) {
