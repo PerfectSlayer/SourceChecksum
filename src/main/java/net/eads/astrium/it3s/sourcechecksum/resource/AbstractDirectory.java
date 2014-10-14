@@ -32,7 +32,7 @@ public abstract class AbstractDirectory extends AbstractResource {
 	 */
 	public AbstractDirectory(String name) {
 		super(name);
-		this.children = new ArrayList<>();
+		this.children = new ArrayList<AbstractResource>();
 	}
 
 	/**
@@ -71,7 +71,7 @@ public abstract class AbstractDirectory extends AbstractResource {
 			((AbstractDirectory) child).sort();
 		}
 	}
-	
+
 	@Override
 	public String toString() {
 		return "Directory "+this.getName();

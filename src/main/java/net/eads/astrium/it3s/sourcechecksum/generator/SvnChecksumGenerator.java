@@ -513,8 +513,12 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		/*
 		 * Get output stream for file content
 		 */
-		// Create output stream with digest decorator
-		try (OutputStream outputStream = new ByteArrayOutputStream(); DigestOutputStream digestOutputStream = new DigestOutputStream(outputStream, digest)) {
+		// Declare output stream
+		DigestOutputStream digestOutputStream = null;
+		try {
+			// Create output stream with digest decorator
+			OutputStream outputStream = new ByteArrayOutputStream();
+			digestOutputStream = new DigestOutputStream(outputStream, digest);
 			// Declare final output stream
 			OutputStream finalOutputStream;
 			// Create translator if file has keywords
@@ -544,8 +548,15 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 			byte[] digestBytes = digestOutputStream.getMessageDigest().digest();
 			// Store digest to file
 			file.setChecksum(digestBytes);
-		} catch (IOException exception) {
-			throw new ChecksumException("Unable to get file content for \""+path+"\".", exception);
+		} finally {
+			// Check stream initialization
+			if (digestOutputStream!=null) {
+				try {
+					// Close the stream
+					digestOutputStream.close();
+				} catch (IOException exception) {
+				}
+			}
 		}
 	}
 }

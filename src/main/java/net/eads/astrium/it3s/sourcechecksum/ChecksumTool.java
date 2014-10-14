@@ -7,8 +7,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -151,7 +149,7 @@ public class ChecksumTool {
 			if (commandLine.hasOption("path")) {
 				// Create checksum generator on file system
 				try {
-					Path path = Paths.get(commandLine.getOptionValue("path"));
+					File path = new File(commandLine.getOptionValue("path"));
 					checksumGenerator = new FsChecksumGenerator(path);
 				} catch (ChecksumException exception) {
 					// Notify user then exit
@@ -208,8 +206,8 @@ public class ChecksumTool {
 						System.exit(0);
 					}
 					// Create paths for checksum generators
-					Path leftPath = Paths.get(paths[0]);
-					Path rightPath = Paths.get(paths[1]);
+					File leftPath = new File(paths[0]);
+					File rightPath = new File(paths[1]);
 					// Create checksum generators
 					leftChecksumGenerator = new FsChecksumGenerator(leftPath);
 					rightChecksumGenerator = new FsChecksumGenerator(rightPath);
@@ -428,12 +426,24 @@ public class ChecksumTool {
 	 *             Throws exception if the checksums could not be output.
 	 */
 	public static void outputResourceChecksum(AbstractResource resource, File outputFile) throws ChecksumException {
-		// Create an output writer
-		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile)))) {
+		// Declare an output writer
+		BufferedWriter writer = null;
+		try {
+			// Create an output writer
+			writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile)));
 			// Output resource on the writer
 			ChecksumTool.outputResourceChecksum(writer, resource);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to write checksum file.", exception);
+		} finally {
+			// Check writer initialization
+			if (writer!=null) {
+				try {
+					// Close writer
+					writer.close();
+				} catch (IOException exception) {
+				}
+			}
 		}
 	}
 
@@ -450,14 +460,26 @@ public class ChecksumTool {
 	 *             Throws exception if the checksums could not be output.
 	 */
 	public static void outputDiffResourceChecksum(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory, File outputFile) throws ChecksumException {
-		// Create an output writer
-		try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile)))) {
+		// Declare an output writer
+		BufferedWriter writer = null;
+		try {
+			// Create an output writer
+			writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile)));
 			// Compute differences
 			DirectoryDifference directoryDifference = ChecksumTool.computeDifferences(leftDirectory, rightDirectory);
 			// Output differences on the writer
 			ChecksumTool.outputDiffResourceChecksum(writer, directoryDifference);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to write checksum file.", exception);
+		} finally {
+			// Check writer initialization
+			if (writer!=null) {
+				try {
+					// Close writer
+					writer.close();
+				} catch (IOException exception) {
+				}
+			}
 		}
 	}
 
@@ -574,12 +596,27 @@ public class ChecksumTool {
 		System.out.print("Input Subversion user password: ");
 		// Check system console
 		if (System.console()==null) {
+			// Declare password
+			String passwd;
 			// Create reader from standard input
-			try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-				return reader.readLine();
+			BufferedReader reader = null;
+			try {
+				reader = new BufferedReader(new InputStreamReader(System.in));
+				passwd = reader.readLine();
 			} catch (IOException exception) {
-				return "";
+				passwd = "";
+			} finally {
+				// Check reader initialization
+				if (reader!=null) {
+					try {
+						// Close reader
+						reader.close();
+					} catch (IOException exception) {
+					}
+				}
 			}
+			// Return read password
+			return passwd;
 		} else {
 			// Read from console
 			return new String(System.console().readPassword());

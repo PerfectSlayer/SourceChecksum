@@ -26,7 +26,7 @@ public class DirectoryDifference extends AbstractDifference {
 	public DirectoryDifference(AbstractDirectory leftDirectory, AbstractDirectory rightDirectory) {
 		super(leftDirectory, rightDirectory);
 		// Create difference collection
-		this.differences = new ArrayList<>();
+		this.differences = new ArrayList<AbstractDifference>();
 	}
 
 	/**

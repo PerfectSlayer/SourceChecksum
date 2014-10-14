@@ -1,6 +1,6 @@
 package net.eads.astrium.it3s.sourcechecksum.resource.fs;
 
-import java.nio.file.Path;
+import java.io.File;
 
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
 
@@ -12,7 +12,7 @@ import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
  */
 public class FsDirectory extends AbstractDirectory {
 	/** The related directory path. */
-	private final Path directory;
+	private final File directory;
 
 	/**
 	 * Constructor.
@@ -20,8 +20,8 @@ public class FsDirectory extends AbstractDirectory {
 	 * @param directory
 	 *            The related directory path.
 	 */
-	public FsDirectory(Path directory) {
-		super(directory.getFileName().toString());
+	public FsDirectory(File directory) {
+		super(directory.getName());
 		this.directory = directory;
 	}
 
@@ -30,7 +30,7 @@ public class FsDirectory extends AbstractDirectory {
 	 * 
 	 * @return The related directory path.
 	 */
-	public Path getFile() {
+	public File getFile() {
 		return this.directory;
 	}
 }

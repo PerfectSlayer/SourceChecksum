@@ -1,13 +1,11 @@
 package net.eads.astrium.it3s.sourcechecksum.generator;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -21,7 +19,6 @@ import net.eads.astrium.it3s.sourcechecksum.ChecksumException;
 import net.eads.astrium.it3s.sourcechecksum.algorithm.ChecksumAlgorithm;
 import net.eads.astrium.it3s.sourcechecksum.listener.ChecksumListener;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractDirectory;
-import net.eads.astrium.it3s.sourcechecksum.resource.AbstractFile;
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractResource;
 import net.eads.astrium.it3s.sourcechecksum.resource.fs.FsDirectory;
 import net.eads.astrium.it3s.sourcechecksum.resource.fs.FsFile;
@@ -36,7 +33,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 * Checksum computation related.
 	 */
 	/** The path to compute checksum. */
-	private final Path path;
+	private final File path;
 	/** The algorithm to use to compute checksum. */
 	private ChecksumAlgorithm algorithm;
 	/*
@@ -57,9 +54,9 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 * @throws ChecksumException
 	 *             Throws exception if the generator could not be created.
 	 */
-	public FsChecksumGenerator(Path path) throws ChecksumException {
+	public FsChecksumGenerator(File path) throws ChecksumException {
 		// Check if path is a directory
-		if (!Files.isDirectory(path))
+		if (!path.isDirectory())
 			throw new ChecksumException("The root path is not a directory.");
 		// Save path to compute checksum
 		this.path = path;
@@ -84,15 +81,15 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// Notify worker
 		listener.onStart();
 		// List directories and files
-		FsFileVisitor fileVisitor = new FsFileVisitor();
+		ListResult listResult = null;
 		try {
-			Files.walkFileTree(this.path, fileVisitor);
+			listResult = FsChecksumGenerator.listFile(this.path);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to list file to compute checksums.", exception);
 		}
 		// Get root and file counter of the file system
-		FsDirectory rootDirectory = fileVisitor.getRoot();
-		this.fileCounter = fileVisitor.getFileCounter();
+		FsDirectory rootDirectory = listResult.directory;
+		this.fileCounter = listResult.fileCounter;
 		listener.onDebug(this.fileCounter+" files found.");
 		/*
 		 * Compute checksums.
@@ -216,12 +213,16 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		/*
 		 * Get output stream for file content
 		 */
-		// Create output stream with digest decorator
-		try (OutputStream outputStream = new ByteArrayOutputStream(); DigestOutputStream digestOutputStream = new DigestOutputStream(outputStream, digest)) {
+		// Declare output stream
+		DigestOutputStream digestOutputStream = null;
+		try {
+			// Create output stream with digest decorator
+			OutputStream outputStream = new ByteArrayOutputStream();
+			digestOutputStream = new DigestOutputStream(outputStream, digest);
 			// Get file content
 			try {
 				// Copy file content to output stream
-				Files.copy(file.getFile(), digestOutputStream);
+				FsChecksumGenerator.copyFile(file.getFile(), digestOutputStream);
 			} catch (IOException exception) {
 				throw new ChecksumException("Unable to get file content for \""+file.getPath()+"\".", exception);
 			}
@@ -229,85 +230,103 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 			byte[] digestBytes = digestOutputStream.getMessageDigest().digest();
 			// Store digest to file
 			file.setChecksum(digestBytes);
-		} catch (IOException exception) {
-			throw new ChecksumException("Unable to get file content for \""+file.getPath()+"\".", exception);
+		} finally {
+			// Check stream initialization
+			if (digestOutputStream!=null) {
+				try {
+					// Close the stream
+					digestOutputStream.close();
+				} catch (IOException exception) {
+				}
+			}
 		}
 	}
 
 	/**
-	 * This class is a file visitor to create file system.
+	 * Copy a file content to an {@link OutputStream}.
+	 * 
+	 * @param sourceFile
+	 *            The source file to copy content.
+	 * @param destinationStream
+	 *            The destination stream to put file content.
+	 * @throws IOException
+	 *             Throws exception if the file content could not be copied in the stream.
+	 */
+	private static void copyFile(File sourceFile, OutputStream destinationStream) throws IOException {
+		// Declare input stream
+		InputStream stream = null;
+		// Create stream buffer
+		byte[] buffer = new byte[1024];
+		try {
+			// Create file input stream
+			stream = new FileInputStream(sourceFile);
+			int read;
+			// Read input stream content
+			while ((read = stream.read(buffer))!=-1) {
+				// Write stream content to output stream
+				destinationStream.write(buffer, 0, read);
+			}
+		} finally {
+			// Check reader initialization
+			if (stream!=null) {
+				try {
+					// Close the reader
+					stream.close();
+				} catch (IOException exception) {
+				}
+			}
+		}
+	}
+
+	/**
+	 * List content of a directory.
+	 * 
+	 * @param directory
+	 *            The directory to list.
+	 * @return The listing result.
+	 * @throws IOException
+	 *             Throws exception if the directory could not be listed.
+	 */
+	private static ListResult listFile(File directory) throws IOException {
+		// Check directory
+		if (!directory.isDirectory())
+			throw new IOException("The path to list is not a directory.");
+		// Create a list result
+		ListResult result = new ListResult();
+		// Create list result directory
+		result.directory = new FsDirectory(directory);
+		// Process each child file
+		for (File childFile : directory.listFiles()) {
+			// Check file type
+			if (childFile.isDirectory()) {
+				// Recursively list child directory
+				ListResult childResult = FsChecksumGenerator.listFile(childFile);
+				// Add child directory
+				result.directory.addChild(childResult.directory);
+				// Add child counter
+				result.fileCounter += childResult.fileCounter;
+			} else {
+				// Create and add child file
+				FsFile file = new FsFile(childFile);
+				result.directory.addChild(file);
+				// Increment file counter
+				result.fileCounter++;
+			}
+		}
+		// Return list result
+		return result;
+	}
+
+	/**
+	 * This class is a helper class for {@link FsChecksumGenerator#listFile(File)} method.
 	 * 
 	 * @author Bruce BUJON
 	 *
 	 */
-	private static class FsFileVisitor extends SimpleFileVisitor<Path> {
-		/** The root directory. */
-		private FsDirectory root;
+	private static class ListResult {
+		/** The listed directory. */
+		private FsDirectory directory;
 		/** The file counter. */
 		private int fileCounter;
-		/** The currently visited directory. */
-		private FsDirectory currentDirectory;
-
-		/**
-		 * Get the root directory of the file system.
-		 * 
-		 * @return The root directory of the file system.
-		 */
-		public FsDirectory getRoot() {
-			return this.root;
-		}
-
-		/**
-		 * Get the file counter.
-		 * 
-		 * @return The file counter.
-		 */
-		public int getFileCounter() {
-			return this.fileCounter;
-		}
-
-		/*
-		 * File Visitor.
-		 */
-
-		@Override
-		public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-			// Check if root exists
-			if (this.root==null) {
-				// Create root directory
-				this.root = new FsDirectory(dir);
-				// Save current directory
-				this.currentDirectory = this.root;
-			} else {
-				// Create directory
-				FsDirectory currentDirectory = new FsDirectory(dir);
-				// Append current directory
-				this.currentDirectory.addChild(currentDirectory);
-				// Save current directory
-				this.currentDirectory = currentDirectory;
-			}
-			// Continue visiting
-			return FileVisitResult.CONTINUE;
-		}
-
-		@Override
-		public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-			// Create file
-			AbstractFile currentFile = new FsFile(file);
-			// Append current file
-			this.currentDirectory.addChild(currentFile);
-			// Increment file counter
-			this.fileCounter++;
-			// Continue visiting
-			return FileVisitResult.CONTINUE;
-		}
-
-		@Override
-		public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-			// Update current directory
-			this.currentDirectory = (FsDirectory) this.currentDirectory.getParent();
-			// Continue visiting
-			return FileVisitResult.CONTINUE;
-		}
 	}
 }

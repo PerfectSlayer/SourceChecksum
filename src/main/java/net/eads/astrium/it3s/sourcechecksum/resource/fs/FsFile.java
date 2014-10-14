@@ -1,6 +1,6 @@
 package net.eads.astrium.it3s.sourcechecksum.resource.fs;
 
-import java.nio.file.Path;
+import java.io.File;
 
 import net.eads.astrium.it3s.sourcechecksum.resource.AbstractFile;
 
@@ -12,7 +12,7 @@ import net.eads.astrium.it3s.sourcechecksum.resource.AbstractFile;
  */
 public class FsFile extends AbstractFile {
 	/** The related file path. */
-	private final Path file;
+	private final File file;
 
 	/**
 	 * Constructor.
@@ -20,8 +20,8 @@ public class FsFile extends AbstractFile {
 	 * @param file
 	 *            The related file path.
 	 */
-	public FsFile(Path file) {
-		super(file.getFileName().toString());
+	public FsFile(File file) {
+		super(file.getName());
 		this.file = file;
 	}
 
@@ -30,7 +30,7 @@ public class FsFile extends AbstractFile {
 	 * 
 	 * @return The related file path.
 	 */
-	public Path getFile() {
+	public File getFile() {
 		return this.file;
 	}
 }

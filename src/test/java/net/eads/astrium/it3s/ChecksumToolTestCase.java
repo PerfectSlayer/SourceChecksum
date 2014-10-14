@@ -1,12 +1,10 @@
 package net.eads.astrium.it3s;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -100,8 +98,8 @@ public class ChecksumToolTestCase extends TestCase {
 		 * Create checksum generator.
 		 */
 		// Create paths to compute checksums
-		Path leftPath = Paths.get("src", "test", "resources", "files", "left");
-		Path rightPath = Paths.get("src", "test", "resources", "files", "right");
+		File leftPath = new File("src"+File.separator+"test"+File.separator+"resources"+File.separator+"files"+File.separator+"left");
+		File rightPath = new File("src"+File.separator+"test"+File.separator+"resources"+File.separator+"files"+File.separator+"right");
 		// Create output listener
 		ConsoleOutputListener listener = new ConsoleOutputListener();
 		// Declare checksum generators
@@ -135,20 +133,16 @@ public class ChecksumToolTestCase extends TestCase {
 				fail("The resource "+child.getName()+" is not a file.");
 			AbstractFile file = (AbstractFile) child;
 			// Check child name
-			switch (child.getName()) {
-			case "a.png":
+			String childName = child.getName();
+			if ("a.png".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), A_PNG_CRC32_CHECKSUM));
-				break;
-			case "a.txt":
+			} else if ("a.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), A_TXT_CRC32_CHECKSUM));
-				break;
-			case "aa.txt":
+			} else if ("aa.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), AA_TXT_CRC32_CHECKSUM));
-				break;
-			case "b.txt":
+			} else if ("b.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), B_TXT_CRC32_CHECKSUM));
-				break;
-			default:
+			} else {
 				fail("The resource "+child.getName()+" should not be computed.");
 			}
 		}
@@ -171,20 +165,16 @@ public class ChecksumToolTestCase extends TestCase {
 				fail("The resource "+child.getName()+" is not a file.");
 			AbstractFile file = (AbstractFile) child;
 			// Check child name
-			switch (child.getName()) {
-			case "a.png":
+			String childName = child.getName();
+			if ("a.png".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), A_PNG_MD5_CHECKSUM));
-				break;
-			case "a.txt":
+			} else if ("a.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), A_TXT_MD5_CHECKSUM));
-				break;
-			case "aa.txt":
+			} else if ("aa.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), AA_TXT_MD5_CHECKSUM));
-				break;
-			case "b.txt":
+			} else if ("b.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), B_TXT_MD5_CHECKSUM));
-				break;
-			default:
+			} else {
 				fail("The resource "+child.getName()+" should not be computed.");
 			}
 		}
@@ -207,20 +197,16 @@ public class ChecksumToolTestCase extends TestCase {
 				fail("The resource "+child.getName()+" is not a file.");
 			AbstractFile file = (AbstractFile) child;
 			// Check child name
-			switch (child.getName()) {
-			case "a.png":
+			String childName = child.getName();
+			if ("a.png".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), A_PNG_SHA256_CHECKSUM));
-				break;
-			case "a.txt":
+			} else if ("a.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), A_TXT_SHA256_CHECKSUM));
-				break;
-			case "aa.txt":
+			} else if ("aa.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), AA_TXT_SHA256_CHECKSUM));
-				break;
-			case "b.txt":
+			} else if ("b.txt".equals(childName)) {
 				assertTrue(Arrays.equals(file.getChecksum(), B_TXT_SHA256_CHECKSUM));
-				break;
-			default:
+			} else {
 				fail("The resource "+child.getName()+" should not be computed.");
 			}
 		}
@@ -240,9 +226,9 @@ public class ChecksumToolTestCase extends TestCase {
 		 * Check diff algorithm.
 		 */
 		// Declare temporary output file
-		Path outputPath = null;
+		File outputPath = null;
 		try {
-			outputPath = Files.createTempFile("test", ".tmp");
+			outputPath = File.createTempFile("test", ".tmp");
 		} catch (IOException exception) {
 			fail("Unable to create temporary output file.");
 		}
@@ -256,15 +242,17 @@ public class ChecksumToolTestCase extends TestCase {
 		}
 		try {
 			// Output diff checksums
-			ChecksumTool.outputDiffResourceChecksum(leftDirectory, rightDirectory, outputPath.toFile());
+			ChecksumTool.outputDiffResourceChecksum(leftDirectory, rightDirectory, outputPath);
 		} catch (ChecksumException exception) {
 			fail("Unable to output diff checksums.");
 		}
 		// Check output content
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(outputPath.toFile())))) {
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(new FileInputStream(outputPath)));
 			String line = null;
 			int lineNumber = 0;
-			while ((line = reader.readLine()) != null) {
+			while ((line = reader.readLine())!=null) {
 				switch (lineNumber++) {
 				case 0:
 					assertEquals("37288a2f2760819bf2b11484dffb9276e9cf79368d8208399b0fad6538bc1795	left/a.png		", line);
@@ -283,6 +271,15 @@ public class ChecksumToolTestCase extends TestCase {
 			}
 		} catch (IOException exception) {
 			fail("Unable to read output diff checksums.");
+		} finally {
+			// Check reader initialization
+			if (reader!=null) {
+				try {
+					// Close the reader
+					reader.close();
+				} catch (IOException exception) {
+				}
+			}
 		}
 	}
 }
