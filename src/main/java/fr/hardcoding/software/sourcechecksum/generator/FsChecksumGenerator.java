@@ -300,8 +300,26 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		ListResult result = new ListResult();
 		// Create list result directory
 		result.directory = new FsDirectory(directory);
+		// Declare ignore resource status
+		boolean ignoredResource;
 		// Process each child file
 		for (File childFile : directory.listFiles()) {
+			// Mark resource as not ignored
+			ignoredResource = false;
+			// Get resource absolute path
+			String absolutePath = childFile.getAbsolutePath();
+			// Check each path matcher
+			for (PathMatcher matcher : ignoreList) {
+				// Check if path matcher matches
+				if (matcher.matches(absolutePath))
+					// Mark file as ignored
+					ignoredResource = true;
+			}
+			// Check if directory is ignored
+			if (ignoredResource) {
+				// Skip the resource
+				continue;
+			}
 			// Check file type
 			if (childFile.isDirectory()) {
 				// Recursively list child directory
