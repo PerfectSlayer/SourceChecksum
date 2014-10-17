@@ -369,6 +369,8 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					SVNURL rootUrl = this.repository.getRepositoryRoot(false);
 					SVNURL ownerUrl = rootUrl.appendPath(path, false);
 					svnExternal.resolveURL(rootUrl, ownerUrl);
+					// Mark resource as not ignored
+					ignoredResource = false;
 					/*
 					 * Create external resources up to external location.
 					 */
@@ -380,8 +382,13 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					for (PathMatcher matcher : ignoreList) {
 						// Check if path matcher matches
 						if (matcher.matches(externalWorkingCopyPath))
-							// Skip the external
-							continue;
+							// Mark externals as ignored
+							ignoredResource = true;
+					}
+					// Check if externals is ignored
+					if (ignoredResource) {
+						// Skip the externals
+						continue;
 					}
 					// Split external resource path
 					String[] externalPathPart = externalPath.split("/");
