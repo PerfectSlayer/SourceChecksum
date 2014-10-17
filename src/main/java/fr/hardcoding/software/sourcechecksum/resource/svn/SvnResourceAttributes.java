@@ -1,5 +1,7 @@
 package fr.hardcoding.software.sourcechecksum.resource.svn;
 
+import java.io.File;
+
 import fr.hardcoding.software.sourcechecksum.resource.AbstractResource;
 
 /**
@@ -52,8 +54,10 @@ public class SvnResourceAttributes {
 		if (this.workingCopyPath==null) {
 			// Check if resource has parent
 			if (resource.getParent()==null||!(resource.getParent() instanceof SvnResource)) {
-				// Set resource working copy path as name
-				this.workingCopyPath = resource.getName();
+				// Get related resource path
+				File resourceFile = new File(resource.getName());
+				// Set resource working copy path as file name
+				this.workingCopyPath = resourceFile.getName();
 			} else {
 				// Compose resource working copy path from parent
 				this.workingCopyPath = ((SvnResource) resource.getParent()).getWorkingCopyPath()+"/"+resource.getName();

@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,11 +21,13 @@ import fr.hardcoding.software.sourcechecksum.algorithm.ChecksumAlgorithm;
 import fr.hardcoding.software.sourcechecksum.listener.ChecksumListener;
 import fr.hardcoding.software.sourcechecksum.resource.AbstractDirectory;
 import fr.hardcoding.software.sourcechecksum.resource.AbstractResource;
+import fr.hardcoding.software.sourcechecksum.resource.PathMatcher;
 import fr.hardcoding.software.sourcechecksum.resource.fs.FsDirectory;
 import fr.hardcoding.software.sourcechecksum.resource.fs.FsFile;
 
 /**
  * This class is the main checksum generator program.
+ * @author Bruce BUJON
  */
 public class FsChecksumGenerator implements ChecksumGenerator {
 	/** The number of executors for checksum computation. */
@@ -67,7 +70,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 */
 
 	@Override
-	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener) throws ChecksumException {
+	public AbstractDirectory compute(ChecksumAlgorithm algorithm, List<PathMatcher> ignoreList, ChecksumListener listener) throws ChecksumException {
 		// Save algorithm to use
 		this.algorithm = algorithm;
 		// Save start time
@@ -83,7 +86,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// List directories and files
 		ListResult listResult = null;
 		try {
-			listResult = FsChecksumGenerator.listFile(this.path);
+			listResult = FsChecksumGenerator.listFile(this.path, ignoreList);
 		} catch (IOException exception) {
 			throw new ChecksumException("Unable to list file to compute checksums.", exception);
 		}
@@ -283,11 +286,13 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 * 
 	 * @param directory
 	 *            The directory to list.
+	 * @param ignoreList
+	 *            The list of path matcher to check for ignoring resource.
 	 * @return The listing result.
 	 * @throws IOException
 	 *             Throws exception if the directory could not be listed.
 	 */
-	private static ListResult listFile(File directory) throws IOException {
+	private static ListResult listFile(File directory, List<PathMatcher> ignoreList) throws IOException {
 		// Check directory
 		if (!directory.isDirectory())
 			throw new IOException("The path to list is not a directory.");
@@ -300,7 +305,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 			// Check file type
 			if (childFile.isDirectory()) {
 				// Recursively list child directory
-				ListResult childResult = FsChecksumGenerator.listFile(childFile);
+				ListResult childResult = FsChecksumGenerator.listFile(childFile, ignoreList);
 				// Add child directory
 				result.directory.addChild(childResult.directory);
 				// Add child counter

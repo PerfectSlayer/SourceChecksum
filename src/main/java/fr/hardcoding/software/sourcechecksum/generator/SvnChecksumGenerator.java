@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -37,6 +38,7 @@ import fr.hardcoding.software.sourcechecksum.algorithm.ChecksumAlgorithm;
 import fr.hardcoding.software.sourcechecksum.listener.ChecksumListener;
 import fr.hardcoding.software.sourcechecksum.resource.AbstractDirectory;
 import fr.hardcoding.software.sourcechecksum.resource.AbstractResource;
+import fr.hardcoding.software.sourcechecksum.resource.PathMatcher;
 import fr.hardcoding.software.sourcechecksum.resource.svn.SvnDirectory;
 import fr.hardcoding.software.sourcechecksum.resource.svn.SvnFile;
 import fr.hardcoding.software.sourcechecksum.resource.svn.SvnResource;
@@ -158,7 +160,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 */
 
 	@Override
-	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener) throws ChecksumException {
+	public AbstractDirectory compute(ChecksumAlgorithm algorithm, List<PathMatcher> ignoreList, ChecksumListener listener) throws ChecksumException {
 		// Save algorithm to use
 		this.algorithm = algorithm;
 		// Save start time
@@ -174,7 +176,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		// Create executer service
 		ExecutorService executorService = Executors.newFixedThreadPool(SvnChecksumGenerator.NBR_EXECUTORS, this.svnClientThreadFactory);
 		// List root directory
-		this.prepareListDirectory(executorService, this.rootDirectory, listener);
+		this.prepareListDirectory(executorService, this.rootDirectory, ignoreList, listener);
 		try {
 			// Wait until no pending directory left
 			while (!this.pendingDirectories.isEmpty()&&!this.shouldBreak) {
@@ -230,10 +232,13 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 *            The executor service to get executors.
 	 * @param directory
 	 *            The directory resource to list.
+	 * @param ignoreList
+	 *            The list of path matcher to check for ignoring resource.
 	 * @param listener
 	 *            The listener to notify computation progress.
 	 */
-	public void prepareListDirectory(final ExecutorService executorService, final SvnDirectory directory, final ChecksumListener listener) {
+	public void prepareListDirectory(final ExecutorService executorService, final SvnDirectory directory, final List<PathMatcher> ignoreList,
+			final ChecksumListener listener) {
 		// Add directory pending directories
 		this.pendingDirectories.add(directory);
 		// Submit a task to list directory
@@ -245,7 +250,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					return null;
 				try {
 					// List directory content
-					SvnChecksumGenerator.this.listDirectory(executorService, directory, listener);
+					SvnChecksumGenerator.this.listDirectory(executorService, directory, ignoreList, listener);
 				} catch (ChecksumException exception) {
 					// Break the process
 					SvnChecksumGenerator.this.shouldBreak = true;
@@ -265,12 +270,15 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 *            The executor service to get executors.
 	 * @param directory
 	 *            The directory resource to list.
+	 * @param ignoreList
+	 *            The list of path matcher to check for ignoring resource.
 	 * @param listener
 	 *            The listener to notify computation progress.
 	 * @throws ChecksumException
 	 *             Throw exception if the directory could not be listed.
 	 */
-	public void listDirectory(ExecutorService executorService, SvnDirectory directory, ChecksumListener listener) throws ChecksumException {
+	public void listDirectory(ExecutorService executorService, SvnDirectory directory, List<PathMatcher> ignoreList, ChecksumListener listener)
+			throws ChecksumException {
 		/*
 		 * Handle parallel programmation.
 		 */
@@ -281,30 +289,64 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 			this.repository = ((SvnClientThread) Thread.currentThread()).getRepository();
 		// Get directory path
 		String path = directory.getPath();
+		// Get directory working copy path
+		String workingCopyPath = directory.getWorkingCopyPath();
 		try {
 			// Get properties of directory
 			SVNProperties properties = new SVNProperties();
 			// Get path entries
 			Collection<?> entries = this.repository.getDir(path, -1, properties, (Collection<?>) null);
+			// Declare ignore resource status
+			boolean ignoredResource;
 			// Process each entry
 			for (Object entry : entries) {
+				// Mark resource as not ignored
 				SVNDirEntry dirEntry = (SVNDirEntry) entry;
 				// Get entry kind
 				SVNNodeKind nodeKind = dirEntry.getKind();
+				// Mark resource as not ignored
+				ignoredResource = false;
 				// Check entry kind
 				if (nodeKind==SVNNodeKind.DIR) {
 					// Create Subversion directory
 					SvnDirectory childDirectory = new SvnDirectory(dirEntry.getName());
-					directory.addChild(childDirectory);
-					// Recursively process directory
-					this.prepareListDirectory(executorService, childDirectory, listener);
-					continue;
+					// Get working copy related path
+					String childDirectoryPath = workingCopyPath+"/"+childDirectory.getName();
+					// Check each path matcher
+					for (PathMatcher matcher : ignoreList) {
+						// Check if path matcher matches
+						if (matcher.matches(childDirectoryPath))
+							// Mark directory as ignored
+							ignoredResource = true;
+					}
+					// Check if directory is ignored
+					if (!ignoredResource) {
+						// Add child Subversion directory
+						directory.addChild(childDirectory);
+						// Recursively process directory
+						this.prepareListDirectory(executorService, childDirectory, ignoreList, listener);
+					}
+				} else {
+					// Create Subversion file
+					SvnFile file = new SvnFile(dirEntry.getName());
+					// Get working copy related path
+					String filePath = workingCopyPath+"/"+file.getName();
+					// Mark resource as not ignored
+					// Check each path matcher
+					for (PathMatcher matcher : ignoreList) {
+						// Check if path matcher matches
+						if (matcher.matches(filePath))
+							// Mark file as ignored
+							ignoredResource = true;
+					}
+					// Check if file is ignored
+					if (!ignoredResource) {
+						// Add child Subversion file
+						directory.addChild(file);
+						// Update file counter
+						this.fileCounter.incrementAndGet();
+					}
 				}
-				// Create Subversion file
-				SvnFile file = new SvnFile(dirEntry.getName());
-				directory.addChild(file);
-				// Update file counter
-				this.fileCounter.incrementAndGet();
 			}
 			/*
 			 * Process externals.
@@ -330,6 +372,15 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					 */
 					// Get external path
 					String externalPath = svnExternal.getPath();
+					// Get working copy related path
+					String externalWorkingCopyPath = workingCopyPath+"/"+externalPath;
+					// Check each path matcher
+					for (PathMatcher matcher : ignoreList) {
+						// Check if path matcher matches
+						if (matcher.matches(externalWorkingCopyPath))
+							// Skip the external
+							continue;
+					}
 					// Split external resource path
 					String[] externalPathPart = externalPath.split("/");
 					// Create each child resource up to external location
@@ -378,7 +429,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					// Process external directory
 					if (nodeKind==SVNNodeKind.DIR) {
 						// Process external directory
-						this.prepareListDirectory(executorService, (SvnDirectory) externalResource, listener);
+						this.prepareListDirectory(executorService, (SvnDirectory) externalResource, ignoreList, listener);
 					}
 				}
 			} catch (SVNException exception) {

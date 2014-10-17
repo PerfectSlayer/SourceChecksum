@@ -17,6 +17,8 @@ Usage
 |-----------|-------------|
 | --algorithm <arg> | The checksum algorithm to use (CRC32, MD5 or SHA256 (default)) |
 | --diff | Compute version differences |
+| --ignore | The globs patterns to ignore (semicolon separated list) |
+| --ignoreFile | The file with glob patterns to ignore (new line separated file) | 
 | --list | Compute checksums |
 | --output <arg> | The result output file |
 | --password <arg> | The Subversion user password |
