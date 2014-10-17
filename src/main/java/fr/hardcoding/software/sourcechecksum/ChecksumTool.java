@@ -5,11 +5,16 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
@@ -43,7 +48,6 @@ import fr.hardcoding.software.sourcechecksum.resource.svn.SvnResource;
  *
  */
 public class ChecksumTool {
-
 	/**
 	 * The main procedure.
 	 * 
@@ -102,6 +106,21 @@ public class ChecksumTool {
 		OptionBuilder.hasArg(true);
 		Option algorithOption = OptionBuilder.create();
 		options.addOption(algorithOption);
+		// Create ignore globs option
+		OptionBuilder.withLongOpt("ignore");
+		OptionBuilder.withDescription("The globs patterns to ignore (semicolon separated list)");
+		OptionBuilder.hasArg(true);
+		Option ignoreGlobsOption = OptionBuilder.create();
+		// Create ignore file option
+		OptionBuilder.withLongOpt("ignoreFile");
+		OptionBuilder.withDescription("The file with glob patterns to ignore (new line separated file)");
+		OptionBuilder.hasArg(true);
+		Option ignoreFileOption = OptionBuilder.create();
+		// Create ignore group options
+		OptionGroup ignoreGroup = new OptionGroup();
+		ignoreGroup.addOption(ignoreGlobsOption);
+		ignoreGroup.addOption(ignoreFileOption);
+		options.addOptionGroup(ignoreGroup);
 		// Create output option
 		OptionBuilder.withLongOpt("output");
 		OptionBuilder.withDescription("The result output file");
@@ -139,6 +158,28 @@ public class ChecksumTool {
 			// Notify user then exit
 			System.err.println("Invalid algorimthm parameter.");
 			System.exit(0);
+		}
+		// Get the ignore list
+		final List<PathMatcher> ignoreList = new ArrayList<>();
+		FileSystem defaultFileSystem = FileSystems.getDefault();
+		if (commandLine.hasOption("ignore")) {
+			// Get ignore paths from ignore parameter
+			String[] ignorePatterns = commandLine.getOptionValue("ignore").split(";");
+			// Parse each ignore pattern
+			for (String ignorePattern : ignorePatterns) {
+				ignoreList.add(defaultFileSystem.getPathMatcher("glob:"+ignorePattern));
+			}
+		} else if (commandLine.hasOption("ignoreFile")) {
+			// Get ignore file path
+			Path ignoreFilePath = Paths.get(commandLine.getOptionValue("ignoreFile"));
+			try {
+				// Parse each line of ignore file as pattern
+				Files.lines(ignoreFilePath).forEach(pattern -> ignoreList.add(defaultFileSystem.getPathMatcher("glob:"+pattern)));
+			} catch (IOException exception) {
+				// Notify user then exit
+				listener.onError(new Exception("Unable to read ignore file.", exception));
+				System.exit(0);
+			}
 		}
 		// Get the output file
 		File outputFile = new File(commandLine.getOptionValue("output"));
@@ -184,7 +225,7 @@ public class ChecksumTool {
 			}
 			try {
 				// Compute checksums
-				AbstractDirectory directory = checksumGenerator.compute(algorithm, listener);
+				AbstractDirectory directory = checksumGenerator.compute(algorithm, ignoreList, listener);
 				// Output checksums
 				ChecksumTool.outputResourceChecksum(directory, outputFile);
 			} catch (ChecksumException exception) {
@@ -251,8 +292,8 @@ public class ChecksumTool {
 			}
 			try {
 				// Compute checksums
-				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(algorithm, listener);
-				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(algorithm, listener);
+				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(algorithm, ignoreList, listener);
+				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(algorithm, ignoreList, listener);
 				// Sort directories
 				leftDirectory.sort();
 				rightDirectory.sort();
