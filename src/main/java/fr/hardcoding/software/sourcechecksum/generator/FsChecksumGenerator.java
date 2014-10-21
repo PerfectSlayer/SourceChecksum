@@ -27,6 +27,7 @@ import fr.hardcoding.software.sourcechecksum.resource.fs.FsFile;
 
 /**
  * This class is the main checksum generator program.
+ * 
  * @author Bruce BUJON
  */
 public class FsChecksumGenerator implements ChecksumGenerator {
@@ -293,6 +294,23 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 *             Throws exception if the directory could not be listed.
 	 */
 	private static ListResult listFile(File directory, List<PathMatcher> ignoreList) throws IOException {
+		return FsChecksumGenerator.listFile(directory, directory.getPath(), ignoreList);
+	}
+
+	/**
+	 * List content of a directory.
+	 * 
+	 * @param directory
+	 *            The directory to list.
+	 * @param rootPath
+	 *            The root directory path of the listing.
+	 * @param ignoreList
+	 *            The list of path matcher to check for ignoring resource.
+	 * @return The listing result.
+	 * @throws IOException
+	 *             Throws exception if the directory could not be listed.
+	 */
+	private static ListResult listFile(File directory, String rootPath, List<PathMatcher> ignoreList) throws IOException {
 		// Check directory
 		if (!directory.isDirectory())
 			throw new IOException("The path to list is not a directory.");
@@ -306,12 +324,15 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		for (File childFile : directory.listFiles()) {
 			// Mark resource as not ignored
 			ignoredResource = false;
-			// Get resource absolute path
-			String absolutePath = childFile.getAbsolutePath();
+			// Declare relative path
+			String relativePath = childFile.getPath();
+			// Check that full path starts with root path and longer than root path
+			if (relativePath.startsWith(rootPath) && relativePath.length()>rootPath.length())
+				relativePath = relativePath.substring(rootPath.length()+1);
 			// Check each path matcher
 			for (PathMatcher matcher : ignoreList) {
 				// Check if path matcher matches
-				if (matcher.matches(absolutePath))
+				if (matcher.matches(relativePath))
 					// Mark file as ignored
 					ignoredResource = true;
 			}
@@ -323,7 +344,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 			// Check file type
 			if (childFile.isDirectory()) {
 				// Recursively list child directory
-				ListResult childResult = FsChecksumGenerator.listFile(childFile, ignoreList);
+				ListResult childResult = FsChecksumGenerator.listFile(childFile, rootPath, ignoreList);
 				// Add child directory
 				result.directory.addChild(childResult.directory);
 				// Add child counter
