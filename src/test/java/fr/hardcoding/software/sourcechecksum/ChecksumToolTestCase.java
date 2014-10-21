@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -121,7 +120,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.CRC32, Collections.emptyList(), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.CRC32, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute CRC-32 checksums.");
 		}
@@ -157,7 +156,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.MD5, Collections.emptyList(), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.MD5, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute MD5 checksums.");
 		}
@@ -193,7 +192,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, Collections.emptyList(), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}
@@ -250,7 +249,7 @@ public class ChecksumToolTestCase extends TestCase {
 		AbstractDirectory rightDirectory = null;
 		try {
 			// Compute checksums
-			rightDirectory = rightChecksumGenerator.compute(ChecksumAlgorithm.SHA256, Collections.emptyList(), listener);
+			rightDirectory = rightChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}
@@ -275,13 +274,13 @@ public class ChecksumToolTestCase extends TestCase {
 		 * Check ignore list.
 		 */
 		// Declare patter matchers
-		FileSystem fileSystem  = FileSystems.getDefault();
+		FileSystem fileSystem = FileSystems.getDefault();
 		PathMatcher textPathMatcher = fileSystem.getPathMatcher("glob:*.txt");
 		PathMatcher aPathMatcher = fileSystem.getPathMatcher("glob:a.*");
 		PathMatcher bPathMatcher = fileSystem.getPathMatcher("glob:b.*");
 		try {
 			// Compute checksums for all except text files
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, Arrays.asList(textPathMatcher), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener, textPathMatcher);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}
@@ -289,7 +288,7 @@ public class ChecksumToolTestCase extends TestCase {
 		assertEquals(1, leftDirectory.getChildren().size());
 		try {
 			// Compute checksums for all except b and text files
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, Arrays.asList(aPathMatcher, bPathMatcher), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener, aPathMatcher, bPathMatcher);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}

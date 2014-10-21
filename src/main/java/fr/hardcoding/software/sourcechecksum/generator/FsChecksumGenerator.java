@@ -12,7 +12,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,7 +71,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 */
 
 	@Override
-	public AbstractDirectory compute(ChecksumAlgorithm algorithm, List<PathMatcher> ignoreList, ChecksumListener listener) throws ChecksumException {
+	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener, PathMatcher... ignoreMatchers) throws ChecksumException {
 		// Save algorithm to use
 		this.algorithm = algorithm;
 		// Save start time
@@ -86,7 +85,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		// Notify worker
 		listener.onStart();
 		// List directories and files
-		FsFileVisitor fileVisitor = new FsFileVisitor(ignoreList);
+		FsFileVisitor fileVisitor = new FsFileVisitor(ignoreMatchers);
 		try {
 			Files.walkFileTree(this.path, fileVisitor);
 		} catch (IOException exception) {
@@ -244,7 +243,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	 */
 	private static class FsFileVisitor extends SimpleFileVisitor<Path> {
 		/** The list of path matcher to check for ignoring resource. */
-		private final List<PathMatcher> ignoreList;
+		private final PathMatcher[] ignoreMatchers;
 		/** The root directory. */
 		private FsDirectory root;
 		/** The file counter. */
@@ -255,11 +254,11 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		/**
 		 * Constructor.
 		 * 
-		 * @param ignoreList
+		 * @param ignoreMatchers
 		 *            The list of path matcher to check for ignoring resource.
 		 */
-		public FsFileVisitor(List<PathMatcher> ignoreList) {
-			this.ignoreList = ignoreList;
+		public FsFileVisitor(PathMatcher[] ignoreMatchers) {
+			this.ignoreMatchers = ignoreMatchers;
 		}
 
 		/**
@@ -296,7 +295,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 				// Get relative directory
 				Path relativeDir = this.root.getFile().relativize(dir);
 				// Check each path matcher
-				for (PathMatcher matcher : this.ignoreList) {
+				for (PathMatcher matcher : this.ignoreMatchers) {
 					// Check if path matcher matches
 					if (matcher.matches(relativeDir))
 						// Skip the directory
@@ -318,7 +317,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 			// Get relative file
 			Path relativeFile = this.root.getFile().relativize(file);
 			// Check each path matcher
-			for (PathMatcher matcher : this.ignoreList) {
+			for (PathMatcher matcher : this.ignoreMatchers) {
 				// Check if path matcher matches
 				if (matcher.matches(relativeFile))
 					// Skip the file

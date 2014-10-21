@@ -159,28 +159,30 @@ public class ChecksumTool {
 			System.err.println("Invalid algorimthm parameter.");
 			System.exit(0);
 		}
-		// Get the ignore list
-		final List<PathMatcher> ignoreList = new ArrayList<>();
+		// Get the ignore matcher list
+		final List<PathMatcher> ignoreMatcherList = new ArrayList<>();
 		FileSystem defaultFileSystem = FileSystems.getDefault();
 		if (commandLine.hasOption("ignore")) {
 			// Get ignore paths from ignore parameter
 			String[] ignorePatterns = commandLine.getOptionValue("ignore").split(";");
 			// Parse each ignore pattern
 			for (String ignorePattern : ignorePatterns) {
-				ignoreList.add(defaultFileSystem.getPathMatcher("glob:"+ignorePattern));
+				ignoreMatcherList.add(defaultFileSystem.getPathMatcher("glob:"+ignorePattern));
 			}
 		} else if (commandLine.hasOption("ignoreFile")) {
 			// Get ignore file path
 			Path ignoreFilePath = Paths.get(commandLine.getOptionValue("ignoreFile"));
 			try {
 				// Parse each line of ignore file as pattern
-				Files.lines(ignoreFilePath).forEach(pattern -> ignoreList.add(defaultFileSystem.getPathMatcher("glob:"+pattern)));
+				Files.lines(ignoreFilePath).forEach(pattern -> ignoreMatcherList.add(defaultFileSystem.getPathMatcher("glob:"+pattern)));
 			} catch (IOException exception) {
 				// Notify user then exit
 				listener.onError(new Exception("Unable to read ignore file.", exception));
 				System.exit(0);
 			}
 		}
+		// Convert to ignore matchers
+		PathMatcher[] ignoreMatchers = ignoreMatcherList.toArray(new PathMatcher[ignoreMatcherList.size()]);
 		// Get the output file
 		File outputFile = new File(commandLine.getOptionValue("output"));
 		// Check mode
@@ -225,7 +227,7 @@ public class ChecksumTool {
 			}
 			try {
 				// Compute checksums
-				AbstractDirectory directory = checksumGenerator.compute(algorithm, ignoreList, listener);
+				AbstractDirectory directory = checksumGenerator.compute(algorithm, listener, ignoreMatchers);
 				// Output checksums
 				ChecksumTool.outputResourceChecksum(directory, outputFile);
 			} catch (ChecksumException exception) {
@@ -292,8 +294,8 @@ public class ChecksumTool {
 			}
 			try {
 				// Compute checksums
-				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(algorithm, ignoreList, listener);
-				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(algorithm, ignoreList, listener);
+				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(algorithm, listener, ignoreMatchers);
+				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(algorithm, listener, ignoreMatchers);
 				// Sort directories
 				leftDirectory.sort();
 				rightDirectory.sort();
