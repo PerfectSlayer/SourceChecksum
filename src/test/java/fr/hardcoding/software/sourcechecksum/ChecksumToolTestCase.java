@@ -6,7 +6,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 import junit.framework.Test;
@@ -117,11 +116,9 @@ public class ChecksumToolTestCase extends TestCase {
 		/*
 		 * Check each checksum for CRC-32 algorithm.
 		 */
-		// Create empty ignore list
-		List<PathMatcher> emptyIgnoreList = new LinkedList<PathMatcher>();
 		try {
 			// Compute checksums
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.CRC32, emptyIgnoreList, listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.CRC32, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute CRC-32 checksums.");
 		}
@@ -153,7 +150,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.MD5, emptyIgnoreList, listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.MD5, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute MD5 checksums.");
 		}
@@ -185,7 +182,7 @@ public class ChecksumToolTestCase extends TestCase {
 		 */
 		try {
 			// Compute checksums
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, emptyIgnoreList, listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}
@@ -238,7 +235,7 @@ public class ChecksumToolTestCase extends TestCase {
 		AbstractDirectory rightDirectory = null;
 		try {
 			// Compute checksums
-			rightDirectory = rightChecksumGenerator.compute(ChecksumAlgorithm.SHA256, emptyIgnoreList, listener);
+			rightDirectory = rightChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}
@@ -292,7 +289,7 @@ public class ChecksumToolTestCase extends TestCase {
 		PathMatcher bPathMatcher = PathMatcher.fromGlob("b.*");
 		try {
 			// Compute checksums for all except text files
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, Arrays.asList(textPathMatcher), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener, textPathMatcher);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}
@@ -300,7 +297,7 @@ public class ChecksumToolTestCase extends TestCase {
 		assertEquals(1, leftDirectory.getChildren().size());
 		try {
 			// Compute checksums for all except b and text files
-			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, Arrays.asList(aPathMatcher, bPathMatcher), listener);
+			leftDirectory = leftChecksumGenerator.compute(ChecksumAlgorithm.SHA256, listener, aPathMatcher, bPathMatcher);
 		} catch (ChecksumException exception) {
 			fail("Unable to compute SHA-256 checksums.");
 		}

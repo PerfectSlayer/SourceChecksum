@@ -1,7 +1,5 @@
 package fr.hardcoding.software.sourcechecksum.generator;
 
-import java.util.List;
-
 import fr.hardcoding.software.sourcechecksum.ChecksumException;
 import fr.hardcoding.software.sourcechecksum.algorithm.ChecksumAlgorithm;
 import fr.hardcoding.software.sourcechecksum.listener.ChecksumListener;
@@ -20,13 +18,13 @@ public interface ChecksumGenerator {
 	 * 
 	 * @param algorithm
 	 *            The algorithm to use to compute checksum.
-	 * @param ignoreList
-	 *            The list of path matcher to check for ignoring resource.
 	 * @param listener
 	 *            The listener to notify computation progress.
+	 * @param ignoreMatchers
+	 *            The list of path matcher to check for ignoring resource.
 	 * @return The root directory of resources.
 	 * @throws ChecksumException
 	 *             Throws exception if checksums could not be computed.
 	 */
-	public AbstractDirectory compute(ChecksumAlgorithm algorithm, List<PathMatcher> ignoreList, ChecksumListener listener) throws ChecksumException;
+	public AbstractDirectory compute(ChecksumAlgorithm algorithm, ChecksumListener listener, PathMatcher... ignoreMatchers) throws ChecksumException;
 }

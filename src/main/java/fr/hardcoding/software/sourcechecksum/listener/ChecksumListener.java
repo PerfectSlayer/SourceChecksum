@@ -3,7 +3,7 @@ package fr.hardcoding.software.sourcechecksum.listener;
 /**
  * This interface is used to notify source checksum computation progress.
  * 
- * @author m027017
+ * @author Bruce BUJON
  *
  */
 public interface ChecksumListener {
