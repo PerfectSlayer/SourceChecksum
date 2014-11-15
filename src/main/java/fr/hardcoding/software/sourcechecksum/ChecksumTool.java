@@ -296,9 +296,6 @@ public class ChecksumTool {
 				// Compute checksums
 				AbstractDirectory leftDirectory = leftChecksumGenerator.compute(algorithm, listener, ignoreMatchers);
 				AbstractDirectory rightDirectory = rightChecksumGenerator.compute(algorithm, listener, ignoreMatchers);
-				// Sort directories
-				leftDirectory.sort();
-				rightDirectory.sort();
 				// Output checksums
 				ChecksumTool.outputDiffResourceChecksum(leftDirectory, rightDirectory, outputFile);
 			} catch (ChecksumException exception) {
@@ -368,7 +365,8 @@ public class ChecksumTool {
 	}
 
 	/**
-	 * Compute differences between two directories.
+	 * Compute differences between two directories.<br>
+	 * The two directories must be sorted (calling {@link AbstractDirectory#sort()}) in order to compute differences.
 	 * 
 	 * @param leftDirectory
 	 *            The left resource to compute differences.
@@ -480,7 +478,8 @@ public class ChecksumTool {
 	}
 
 	/**
-	 * Output different resource checksums.
+	 * Output different resource checksums.<br>
+	 * The two directories must be sorted (calling {@link AbstractDirectory#sort()}) in order to compute differences.
 	 * 
 	 * @param leftDirectory
 	 *            The left resource to output checksum.
@@ -568,36 +567,36 @@ public class ChecksumTool {
 				// Create output string builder
 				StringBuilder stringBuilder = new StringBuilder();
 				switch (fileDifference.getType()) {
-				case LEFT_ONLY:
-					// Output left file checksum
-					for (byte b : leftFile.getChecksum())
-						stringBuilder.append(String.format("%02x", b));
-					stringBuilder.append('\t');
-					stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
-					stringBuilder.append('\t');
-					stringBuilder.append('\t');
-					break;
-				case DIFFERENT:
-					// Output file checksums
-					for (byte b : leftFile.getChecksum())
-						stringBuilder.append(String.format("%02x", b));
-					stringBuilder.append('\t');
-					stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
-					stringBuilder.append('\t');
-					for (byte b : rightFile.getChecksum())
-						stringBuilder.append(String.format("%02x", b));
-					stringBuilder.append('\t');
-					stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
-					break;
-				case RIGHT_ONLY:
-					// Output right file checksums
-					stringBuilder.append('\t');
-					stringBuilder.append('\t');
-					for (byte b : rightFile.getChecksum())
-						stringBuilder.append(String.format("%02x", b));
-					stringBuilder.append('\t');
-					stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
-					break;
+					case LEFT_ONLY:
+						// Output left file checksum
+						for (byte b : leftFile.getChecksum())
+							stringBuilder.append(String.format("%02x", b));
+						stringBuilder.append('\t');
+						stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
+						stringBuilder.append('\t');
+						stringBuilder.append('\t');
+						break;
+					case DIFFERENT:
+						// Output file checksums
+						for (byte b : leftFile.getChecksum())
+							stringBuilder.append(String.format("%02x", b));
+						stringBuilder.append('\t');
+						stringBuilder.append(leftFile instanceof SvnResource ? ((SvnResource) leftFile).getWorkingCopyPath() : leftFile.getPath());
+						stringBuilder.append('\t');
+						for (byte b : rightFile.getChecksum())
+							stringBuilder.append(String.format("%02x", b));
+						stringBuilder.append('\t');
+						stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
+						break;
+					case RIGHT_ONLY:
+						// Output right file checksums
+						stringBuilder.append('\t');
+						stringBuilder.append('\t');
+						for (byte b : rightFile.getChecksum())
+							stringBuilder.append(String.format("%02x", b));
+						stringBuilder.append('\t');
+						stringBuilder.append(rightFile instanceof SvnResource ? ((SvnResource) rightFile).getWorkingCopyPath() : rightFile.getPath());
+						break;
 				}
 				// Append the file difference
 				writer.write(stringBuilder.toString());

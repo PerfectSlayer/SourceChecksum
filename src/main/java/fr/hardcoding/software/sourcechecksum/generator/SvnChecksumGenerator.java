@@ -212,9 +212,11 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		} catch (InterruptedException exception) {
 			throw new ChecksumException("Checksum computation did not end in time.", exception);
 		}
-		// Check if process has broke
+		// Check if process has broken
 		if (this.shouldBreak)
 			throw new ChecksumException("An error occured while checksum computation.");
+		// Sort root directory
+		this.rootDirectory.sort();
 		// Notify worker
 		listener.onDone();
 		// Compute elapsed time

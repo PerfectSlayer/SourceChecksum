@@ -114,9 +114,11 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 		} catch (InterruptedException exception) {
 			throw new ChecksumException("Checksum computation did not end in time.", exception);
 		}
-		// Check if process has broke
+		// Check if process has broken
 		if (this.shouldBreak)
 			throw new ChecksumException("An error occured while checksum computation.");
+		// Sort root directory
+		rootDirectory.sort();
 		// Notify worker
 		listener.onDone();
 		// Compute elapsed time
@@ -180,9 +182,9 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 					// Process file
 					FsChecksumGenerator.this.processFile(file);
 					// Update progress counter
-					FsChecksumGenerator.this.progressCounter.incrementAndGet();
+					int progress = FsChecksumGenerator.this.progressCounter.incrementAndGet();
 					// Notify listener
-					listener.onProgress(FsChecksumGenerator.this.progressCounter.intValue()*100/FsChecksumGenerator.this.fileCounter);
+					listener.onProgress(progress*100/FsChecksumGenerator.this.fileCounter);
 				} catch (ChecksumException exception) {
 					// Break the process
 					FsChecksumGenerator.this.shouldBreak = true;

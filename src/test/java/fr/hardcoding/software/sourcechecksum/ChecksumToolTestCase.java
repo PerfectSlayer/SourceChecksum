@@ -226,8 +226,6 @@ public class ChecksumToolTestCase extends TestCase {
 		/*
 		 * Check resource sort.
 		 */
-		// Sort resource
-		leftDirectory.sort();
 		// Get sorted children
 		children = leftDirectory.getChildren();
 		// Check child order
