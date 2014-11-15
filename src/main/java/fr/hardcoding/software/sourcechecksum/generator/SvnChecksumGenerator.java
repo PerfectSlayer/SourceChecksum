@@ -491,9 +491,9 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					// Process file
 					SvnChecksumGenerator.this.processFile(repository, file);
 					// Update progress counter
-					SvnChecksumGenerator.this.progressCounter.incrementAndGet();
+					int progress = SvnChecksumGenerator.this.progressCounter.incrementAndGet();
 					// Notify listener
-					listener.onProgress(SvnChecksumGenerator.this.progressCounter.intValue()*100/SvnChecksumGenerator.this.fileCounter.intValue());
+					listener.onProgress(progress*100/SvnChecksumGenerator.this.fileCounter.intValue());
 				} catch (ChecksumException exception) {
 					// Break the process
 					SvnChecksumGenerator.this.shouldBreak = true;
