@@ -19,7 +19,7 @@ public class ConsoleOutputListener implements ChecksumListener {
 	@Override
 	public synchronized void onProgress(int percent) {
 		// Display ASCII progress bar
-		System.out.print("[");
+		System.out.print("\n[");
 		for (int i = 0; i<50; i++)
 			System.out.print(i*2<percent ? "#" : " ");
 		System.out.print("] "+percent+"%\r");
@@ -28,19 +28,19 @@ public class ConsoleOutputListener implements ChecksumListener {
 
 	@Override
 	public void onDone() {
-		System.out.println("Source checksums successfully computed.");
+		System.out.println("\nSource checksums successfully computed.");
 	}
 
 	@Override
 	public void onError(Exception exception) {
 		// Display error message
-		System.out.println("Checksum could not be computed: "+exception.getMessage());
+		System.out.println("\nChecksum could not be computed: "+exception.getMessage());
 		// Display exception to the console
 		exception.printStackTrace();
 	}
 
 	@Override
 	public void onDebug(String message) {
-		System.out.println("[debug] "+message);
+		System.out.print("\n[debug] "+message);
 	}
 }

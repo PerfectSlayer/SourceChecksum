@@ -210,9 +210,11 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		} catch (InterruptedException exception) {
 			throw new ChecksumException("Checksum computation did not end in time.", exception);
 		}
-		// Check if process has broke
+		// Check if process has broken
 		if (this.shouldBreak)
 			throw new ChecksumException("An error occured while checksum computation.");
+		// Sort root directory
+		this.rootDirectory.sort();
 		// Notify worker
 		listener.onDone();
 		// Compute elapsed time
@@ -489,9 +491,9 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 					// Process file
 					SvnChecksumGenerator.this.processFile(repository, file);
 					// Update progress counter
-					SvnChecksumGenerator.this.progressCounter.incrementAndGet();
+					int progress = SvnChecksumGenerator.this.progressCounter.incrementAndGet();
 					// Notify listener
-					listener.onProgress(SvnChecksumGenerator.this.progressCounter.intValue()*100/SvnChecksumGenerator.this.fileCounter.intValue());
+					listener.onProgress(progress*100/SvnChecksumGenerator.this.fileCounter.intValue());
 				} catch (ChecksumException exception) {
 					// Break the process
 					SvnChecksumGenerator.this.shouldBreak = true;
