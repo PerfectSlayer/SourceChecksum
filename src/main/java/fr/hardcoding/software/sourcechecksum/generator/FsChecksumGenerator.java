@@ -363,7 +363,7 @@ public class FsChecksumGenerator implements ChecksumGenerator {
 	}
 
 	/**
-	 * This class is a helper class for {@link FsChecksumGenerator#listFile(File)} method.
+	 * This class is a helper class for {@link FsChecksumGenerator#listFile(File, String, PathMatcher[])} method.
 	 * 
 	 * @author Bruce BUJON
 	 *
