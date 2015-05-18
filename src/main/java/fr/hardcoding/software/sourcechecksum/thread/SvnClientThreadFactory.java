@@ -19,7 +19,7 @@ public class SvnClientThreadFactory implements ThreadFactory {
 	/** The Subversion user name. */
 	private final String user;
 	/** The Subversion user password. */
-	private final String passwd;
+	private final char[] passwd;
 	/** The created thread counter. */
 	private int threadCounter;
 
@@ -33,7 +33,7 @@ public class SvnClientThreadFactory implements ThreadFactory {
 	 * @param passwd
 	 *            The Subversion user password.
 	 */
-	public SvnClientThreadFactory(String url, String user, String passwd) {
+	public SvnClientThreadFactory(String url, String user, char[] passwd) {
 		// Store Subversion client data
 		this.url = url;
 		this.user = user;

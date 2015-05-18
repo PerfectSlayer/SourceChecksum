@@ -16,12 +16,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -63,13 +62,9 @@ public class ChecksumTool {
 		// Create options declaration
 		Options options = new Options();
 		// Create list option
-		OptionBuilder.withLongOpt("list");
-		OptionBuilder.withDescription("Compute checksums");
-		Option listOption = OptionBuilder.create();
+		Option listOption = Option.builder().longOpt("list").desc("Compute checksums").build();
 		// Create diff option
-		OptionBuilder.withLongOpt("diff");
-		OptionBuilder.withDescription("Compute version differences");
-		Option diffOption = OptionBuilder.create();
+		Option diffOption = Option.builder().longOpt("diff").desc("Compute version differences").build();
 		// Create mode option group
 		OptionGroup modeGroup = new OptionGroup();
 		modeGroup.setRequired(true);
@@ -77,56 +72,31 @@ public class ChecksumTool {
 		modeGroup.addOption(listOption);
 		options.addOptionGroup(modeGroup);
 		// Create path option
-		OptionBuilder.withLongOpt("path");
-		OptionBuilder.withDescription("The paths to compute checksums or differences");
-		OptionBuilder.hasArgs(2);
-		Option pathOption = OptionBuilder.create();
+		Option pathOption = Option.builder().longOpt("path").desc("The paths to compute checksums or differences").numberOfArgs(2).build();
 		options.addOption(pathOption);
 		// Create URL option
-		OptionBuilder.withLongOpt("url");
-		OptionBuilder.withDescription("The URLs of Subversion resources to compute checksums or differences");
-		OptionBuilder.hasArgs(2);
-		Option urlOption = OptionBuilder.create();
+		Option urlOption = Option.builder().longOpt("url").desc("The URLs of Subversion resources to compute checksums or differences").numberOfArgs(2).build();
 		options.addOption(urlOption);
 		// Create user option
-		OptionBuilder.withLongOpt("user");
-		OptionBuilder.withDescription("The Subversion user name");
-		OptionBuilder.hasArg(true);
-		Option userOption = OptionBuilder.create();
+		Option userOption = Option.builder().longOpt("user").desc("The Subversion user name").hasArg(true).build();
 		options.addOption(userOption);
 		// Create password option
-		OptionBuilder.withLongOpt("password");
-		OptionBuilder.withDescription("The Subversion user password");
-		OptionBuilder.hasArg(true);
-		Option passwdOption = OptionBuilder.create();
+		Option passwdOption = Option.builder().longOpt("password").desc("The Subversion user password").hasArg(true).build();
 		options.addOption(passwdOption);
 		// Create algorithm option
-		OptionBuilder.withLongOpt("algorithm");
-		OptionBuilder.withDescription("The checksum algorithm to use (CRC32, MD5 or SHA256 (default))");
-		OptionBuilder.hasArg(true);
-		Option algorithOption = OptionBuilder.create();
+		Option algorithOption = Option.builder().longOpt("algorithm").desc("The checksum algorithm to use (CRC32, MD5 or SHA256 (default))").hasArg(true).build();
 		options.addOption(algorithOption);
 		// Create ignore globs option
-		OptionBuilder.withLongOpt("ignore");
-		OptionBuilder.withDescription("The globs patterns to ignore (semicolon separated list)");
-		OptionBuilder.hasArg(true);
-		Option ignoreGlobsOption = OptionBuilder.create();
+		Option ignoreGlobsOption = Option.builder().longOpt("ignore").desc("The globs patterns to ignore (semicolon separated list)").hasArg(true).build();
 		// Create ignore file option
-		OptionBuilder.withLongOpt("ignoreFile");
-		OptionBuilder.withDescription("The file with glob patterns to ignore (new line separated file)");
-		OptionBuilder.hasArg(true);
-		Option ignoreFileOption = OptionBuilder.create();
+		Option ignoreFileOption = Option.builder().longOpt("ignoreFile").desc("The file with glob patterns to ignore (new line separated file)").hasArg(true).build();
 		// Create ignore group options
 		OptionGroup ignoreGroup = new OptionGroup();
 		ignoreGroup.addOption(ignoreGlobsOption);
 		ignoreGroup.addOption(ignoreFileOption);
 		options.addOptionGroup(ignoreGroup);
 		// Create output option
-		OptionBuilder.withLongOpt("output");
-		OptionBuilder.withDescription("The result output file");
-		OptionBuilder.hasArg(true);
-		OptionBuilder.isRequired(true);
-		Option outputOption = OptionBuilder.create();
+		Option outputOption = Option.builder().longOpt("output").desc("The result output file").hasArg(true).required(true).build();
 		options.addOption(outputOption);
 		// Check CLI parameters
 		if (args.length==0) {
@@ -137,7 +107,7 @@ public class ChecksumTool {
 			System.exit(0);
 		}
 		// Create command line parse
-		CommandLineParser commandLineParser = new BasicParser();
+		CommandLineParser commandLineParser = new DefaultParser();
 		CommandLine commandLine = null;
 		// Parse command line
 		try {
@@ -207,11 +177,11 @@ public class ChecksumTool {
 					String url = commandLine.getOptionValue("url");
 					String user = commandLine.getOptionValue("user");
 					// Get user password
-					String passwd;
+					char[] passwd;
 					if (commandLine.hasOption("password")) {
-						passwd = commandLine.getOptionValue("password");
+						passwd = commandLine.getOptionValue("password").toCharArray();
 					} else {
-						passwd = new String(ChecksumTool.readPasswd());
+						passwd = ChecksumTool.readPasswd();
 					}
 					// Create checksum generator
 					checksumGenerator = new SvnChecksumGenerator(url, user, passwd);
@@ -266,11 +236,11 @@ public class ChecksumTool {
 					// Get user parameter for checksum generators
 					String user = commandLine.getOptionValue("user");
 					// Get user password
-					String passwd;
+					char[] passwd;
 					if (commandLine.hasOption("passwd")) {
-						passwd = commandLine.getOptionValue("passwd");
+						passwd = commandLine.getOptionValue("passwd").toCharArray();
 					} else {
-						passwd = new String(ChecksumTool.readPasswd());
+						passwd = ChecksumTool.readPasswd();
 					}
 					// Get URLs for checksum generators
 					String urls[] = commandLine.getOptionValues("url");
@@ -359,7 +329,7 @@ public class ChecksumTool {
 				// Compare mixing extension presence
 				String leftSubName = leftNameIndex>0 ? leftName.substring(0, leftNameIndex) : leftName;
 				String rightSubName = rightNameIndex>0 ? rightName.substring(0, rightNameIndex) : rightName;
-				return leftSubName.compareTo(rightSubName);
+				return leftSubName.equals(rightSubName) ? leftName.compareTo(rightName) : leftSubName.compareTo(rightSubName);
 			}
 		}
 	}
@@ -610,20 +580,20 @@ public class ChecksumTool {
 	 * 
 	 * @return The read user password.
 	 */
-	private static String readPasswd() {
+	private static char[] readPasswd() {
 		// Notify user
 		System.out.print("Input Subversion user password: ");
 		// Check system console
 		if (System.console()==null) {
 			// Create reader from standard input
 			try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-				return reader.readLine();
+				return reader.readLine().toCharArray();
 			} catch (IOException exception) {
-				return "";
+				return "".toCharArray();
 			}
 		} else {
 			// Read from console
-			return new String(System.console().readPassword());
+			return System.console().readPassword();
 		}
 	}
 

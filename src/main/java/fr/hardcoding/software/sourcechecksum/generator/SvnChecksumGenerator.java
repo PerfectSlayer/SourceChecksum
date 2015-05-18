@@ -94,7 +94,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 * @throws ChecksumException
 	 *             Throws exception if the repository could not be created.
 	 */
-	public static SVNRepository createRepository(String url, String name, String passwd) throws ChecksumException {
+	public static SVNRepository createRepository(String url, String name, char[] passwd) throws ChecksumException {
 		// Declare repository
 		SVNRepository repository;
 		try {
@@ -131,7 +131,7 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 	 * @throws ChecksumException
 	 *             Throws exception if the generator could not be created.
 	 */
-	public SvnChecksumGenerator(final String url, final String user, final String passwd) throws ChecksumException {
+	public SvnChecksumGenerator(final String url, final String user, final char[] passwd) throws ChecksumException {
 		// Create repository
 		this.repository = SvnChecksumGenerator.createRepository(url, user, passwd);
 		// Get Subversion root URL
@@ -543,10 +543,17 @@ public class SvnChecksumGenerator implements ChecksumGenerator {
 		String keywords = properties.getStringValue(SVNProperty.KEYWORDS);
 		Map<String, byte[]> keywordsMap = null;
 		if (keywords!=null) {
+			// Get repository root
+			String repositoryRoot = null;
+			try {
+				repository.getRepositoryRoot(true).toString();
+			} catch (SVNException exception) {
+				throw new ChecksumException("Unable to get repository root for \""+path+"\".", exception);
+			}
 			String cmtRev = properties.getStringValue(SVNProperty.COMMITTED_REVISION);
 			String cmtDate = properties.getStringValue(SVNProperty.COMMITTED_DATE);
 			String author = properties.getStringValue(SVNProperty.LAST_AUTHOR);
-			keywordsMap = SVNTranslator.computeKeywords(keywords, repository.getLocation().toString(), author, cmtDate, cmtRev,
+			keywordsMap = SVNTranslator.computeKeywords(keywords, repository.getLocation().toString(), repositoryRoot, author, cmtDate, cmtRev,
 					SvnChecksumGenerator.SVN_OPTIONS);
 		}
 		/*
